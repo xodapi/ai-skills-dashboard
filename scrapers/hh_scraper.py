@@ -20,10 +20,14 @@ class HHScraper:
     BASE_URL = "https://api.hh.ru"
     
     def __init__(self):
+        # HH.ru Public API не требует API ключа для чтения вакансий
+        # Достаточно корректного User-Agent
         self.headers = {
             "User-Agent": settings.USER_AGENT,
             "HH-User-Agent": "AI Skills Dashboard (sbb@bsosh3.org)",
         }
+        # Authorization нужен только для создания/изменения вакансий
+        # Для парсинга публичных вакансий НЕ требуется
         if settings.HH_API_KEY:
             self.headers["Authorization"] = f"Bearer {settings.HH_API_KEY}"
     
