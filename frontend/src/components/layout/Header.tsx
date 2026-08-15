@@ -3,7 +3,9 @@ import { Link, useLocation } from 'react-router-dom'
 const NAV = [
   { name: 'Dashboard', href: '/', icon: '◈' },
   { name: 'Навыки', href: '/skills', icon: '⬡' },
+  { name: 'Наборы', href: '/skillsets', icon: '⋈' },
   { name: 'Вакансии', href: '/vacancies', icon: '◉' },
+  { name: 'География', href: '/worldmap', icon: '◐' },
   { name: 'Тренды', href: '/trends', icon: '∿' },
   { name: 'Аналитика', href: '/analytics', icon: '⊞' },
 ]
