@@ -9,8 +9,7 @@ asyncpg==0.29.0
 alembic==1.13.3
 psycopg2-binary==2.9.9
 
-# TimescaleDB support
-timescaledb-python==0.1.1
+# TimescaleDB support (via psycopg2 - no separate package needed)
 
 # Redis and Celery
 redis==5.2.0
