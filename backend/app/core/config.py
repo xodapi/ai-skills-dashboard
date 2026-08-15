@@ -44,11 +44,17 @@ class Settings(BaseSettings):
     
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def parse_cors_origins(cls, v: str | List[str]) -> List[str]:
+    def parse_cors_origins(cls, v) -> List[str]:
         """Parse CORS origins from string or list."""
         if isinstance(v, str):
+            # Handle empty string
+            if not v.strip():
+                return ["http://localhost:3000"]
             return [origin.strip() for origin in v.split(",")]
-        return v
+        if isinstance(v, list):
+            return v
+        # Handle None or other types
+        return ["http://localhost:3000"]
     
     # API Keys
     HH_API_KEY: str = Field(default="")
