@@ -38,23 +38,17 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
     
     # CORS
-    CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000"]
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:3000"
     )
     
-    @field_validator("CORS_ORIGINS", mode="before")
+    @field_validator("CORS_ORIGINS", mode="after")
     @classmethod
-    def parse_cors_origins(cls, v) -> List[str]:
-        """Parse CORS origins from string or list."""
-        if isinstance(v, str):
-            # Handle empty string
-            if not v.strip():
-                return ["http://localhost:3000"]
-            return [origin.strip() for origin in v.split(",")]
-        if isinstance(v, list):
-            return v
-        # Handle None or other types
-        return ["http://localhost:3000"]
+    def parse_cors_origins(cls, v: str) -> List[str]:
+        """Parse CORS origins from comma-separated string."""
+        if not v or not v.strip():
+            return ["http://localhost:3000"]
+        return [origin.strip() for origin in v.split(",")]
     
     # API Keys
     HH_API_KEY: str = Field(default="")
