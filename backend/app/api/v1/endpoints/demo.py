@@ -32,25 +32,33 @@ async def get_vacancies(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     city: Optional[str] = None,
-    skill: Optional[str] = None
+    skill: Optional[str] = None,
+    search: Optional[str] = None,
 ):
-    """Get list of vacancies with filters."""
+    """Get list of vacancies with filters. `search` matches title and company (case-insensitive)."""
     filtered = DEMO_VACANCIES
-    
+
     if city:
         filtered = [v for v in filtered if v["city"].lower() == city.lower()]
-    
+
     if skill:
         filtered = [v for v in filtered if skill in v["skills"]]
-    
+
+    if search:
+        q = search.lower()
+        filtered = [
+            v for v in filtered
+            if q in v["title"].lower() or q in v["company"].lower()
+        ]
+
     total = len(filtered)
     items = filtered[skip:skip + limit]
-    
+
     return {
         "total": total,
         "skip": skip,
         "limit": limit,
-        "items": items
+        "items": items,
     }
 
 
