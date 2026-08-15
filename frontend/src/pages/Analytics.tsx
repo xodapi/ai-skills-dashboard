@@ -1,205 +1,199 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  PieChart, Pie, Legend,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts'
 
 const API = '/api/v1'
+const COLORS = ['#22D3EE','#10B981','#818CF8','#F59E0B','#F43F5E','#34D399','#A78BFA','#FB923C','#60A5FA','#4ADE80',
+                 '#E879F9','#2DD4BF','#FCD34D','#86EFAC','#C084FC']
 
-const COLORS = [
-  '#38BDF8','#6EE7B7','#F472B6','#FBBF24','#818CF8',
-  '#34D399','#FB923C','#A78BFA','#4ADE80','#60A5FA',
-]
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{ background: 'rgba(8,12,20,.97)', border: '1px solid rgba(34,211,238,.2)', borderRadius: 10, padding: '10px 14px', fontSize: 12 }}>
+      <p style={{ color: '#22D3EE', fontWeight: 600, marginBottom: 6 }}>{label}</p>
+      {payload.map((p: any) => (
+        <p key={p.dataKey} style={{ color: '#94A3B8', marginBottom: 2 }}>
+          {p.name}: <strong style={{ color: '#F1F5F9' }}>{typeof p.value === 'number' ? p.value.toLocaleString('ru-RU') : p.value}</strong>
+        </p>
+      ))}
+    </div>
+  )
+}
 
 export function Analytics() {
-  const { data: topSkills } = useQuery({
-    queryKey: ['topSkills20'],
-    queryFn: () => fetch(`${API}/skills/top?limit=20`).then(r => r.json()),
-  })
+  const { data: topSkills } = useQuery({ queryKey: ['topSkills20'], queryFn: () => fetch(`${API}/skills/top?limit=20`).then(r => r.json()) })
+  const { data: mapData }   = useQuery({ queryKey: ['mapData'],     queryFn: () => fetch(`${API}/map/vacancies`).then(r => r.json()) })
+  const { data: summary }   = useQuery({ queryKey: ['summary'],     queryFn: () => fetch(`${API}/stats/summary`).then(r => r.json()) })
 
-  const { data: mapData } = useQuery({
-    queryKey: ['mapData'],
-    queryFn: () => fetch(`${API}/map/vacancies`).then(r => r.json()),
-  })
-
-  const { data: summary } = useQuery({
-    queryKey: ['summary'],
-    queryFn: () => fetch(`${API}/stats/summary`).then(r => r.json()),
-  })
-
-  const skills: any[] = topSkills?.skills ?? []
+  const skills: any[]   = topSkills?.skills ?? []
   const locations: any[] = mapData?.locations ?? []
 
-  // salary range buckets from skills
-  const salaryData = skills
-    .filter(s => s.avg_salary > 0)
-    .slice(0, 10)
+  const salaryData = skills.filter(s => s.avg_salary > 0).slice(0, 12)
     .map(s => ({ name: s.skill, salary: s.avg_salary }))
     .sort((a, b) => b.salary - a.salary)
 
-  // city distribution pie
-  const cityData = locations
-    .sort((a, b) => b.vacancy_count - a.vacancy_count)
-    .slice(0, 8)
-    .map(l => ({ name: l.city, value: l.vacancy_count }))
+  const radarData = skills.slice(0, 7).map(s => ({
+    skill: s.skill, demand: Math.round(s.percentage), salary: Math.round(s.avg_salary / 10000),
+  }))
+
+  const topCities = locations.sort((a, b) => b.vacancy_count - a.vacancy_count).slice(0, 8)
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="space-y-8">
-        <h1 className="display-text text-display-md text-accent-primary">
-          Аналитика
-        </h1>
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 40 }}>
 
-        {/* Summary strip */}
-        {summary && (
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { label: 'Всего вакансий', value: summary.total_vacancies?.toLocaleString('ru-RU') },
-              { label: 'Уникальных навыков', value: summary.total_skills?.toLocaleString('ru-RU') },
-              { label: 'Средняя зарплата', value: summary.avg_salary ? summary.avg_salary.toLocaleString('ru-RU') + ' ₽' : '—' },
-            ].map(s => (
-              <div key={s.label} className="rounded-xl bg-surface-3 border border-surface-4 p-5">
-                <p className="text-xs uppercase tracking-widest text-gray-400">{s.label}</p>
-                <p className="mt-1 text-2xl font-bold text-accent-primary">{s.value}</p>
-              </div>
-            ))}
+      {/* Header */}
+      <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <span className="tag">Аналитика рынка</span>
+        <h1 style={{
+          fontSize: 'clamp(1.8rem,4vw,3rem)', fontWeight: 900, letterSpacing: '-0.04em',
+          background: 'linear-gradient(135deg, #F1F5F9, #F59E0B)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+        }}>Аналитика</h1>
+      </section>
+
+      {/* KPI strip */}
+      {summary && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
+          {[
+            { label: 'Вакансий', value: summary.total_vacancies?.toLocaleString('ru-RU'), color: '#22D3EE' },
+            { label: 'Навыков', value: summary.total_skills?.toLocaleString('ru-RU'), color: '#10B981' },
+            { label: 'Ср. зарплата', value: summary.avg_salary ? summary.avg_salary.toLocaleString('ru-RU') + ' ₽' : '—', color: '#F59E0B' },
+          ].map(s => (
+            <div key={s.label} className="glass" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <p style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 600 }}>{s.label}</p>
+              <p style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.04em', color: s.color }}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Two charts side by side */}
+      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 20 }}>
+
+        {/* Salary bar */}
+        <div className="glass" style={{ padding: 24 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 20 }}>Средняя зарплата по навыкам, ₽</p>
+          {salaryData.length === 0 ? (
+            <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}>Загрузка…</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={salaryData} layout="vertical" margin={{ top: 0, right: 60, bottom: 0, left: 130 }}>
+                <XAxis type="number" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false}
+                  tickFormatter={v => `${(v / 1000).toFixed(0)}к`} />
+                <YAxis type="category" dataKey="name" tick={{ fill: '#94A3B8', fontSize: 12 }} axisLine={false} tickLine={false} width={125} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="salary" name="Зарплата" radius={[0, 6, 6, 0]} maxBarSize={18}>
+                  {salaryData.map((_: any, i: number) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={.8} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Radar */}
+        <div className="glass" style={{ padding: 24 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>Профиль топ-навыков</p>
+          <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>Спрос (%) и зарплата (×10k ₽)</p>
+          {radarData.length === 0 ? (
+            <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}>Загрузка…</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="rgba(255,255,255,.07)" />
+                <PolarAngleAxis dataKey="skill" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                <PolarRadiusAxis tick={{ fill: '#475569', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <Radar name="Спрос %" dataKey="demand" stroke="#22D3EE" fill="rgba(34,211,238,.15)" strokeWidth={2} />
+                <Radar name="Зарплата" dataKey="salary" stroke="#10B981" fill="rgba(16,185,129,.1)" strokeWidth={2} />
+                <Tooltip content={<CustomTooltip />} />
+              </RadarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* Cities */}
+      <div className="glass" style={{ padding: 24 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 20 }}>Вакансии по городам</p>
+        {topCities.length === 0 ? (
+          <div style={{ color: 'var(--text-3)' }}>Загрузка…</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {(() => {
+              const max = topCities[0]?.vacancy_count ?? 1
+              return topCities.map((city: any, i: number) => {
+                const pct = Math.round(city.vacancy_count / max * 100)
+                return (
+                  <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 13 }}>
+                    <span style={{ width: 22, textAlign: 'right', color: 'var(--text-3)', fontSize: 11 }}>{i + 1}</span>
+                    <span style={{ width: 160, color: 'var(--text-1)', fontWeight: 500, flexShrink: 0 }}>{city.city}</span>
+                    <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,.05)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${pct}%`, height: '100%', borderRadius: 99,
+                        background: `linear-gradient(90deg, ${COLORS[i % COLORS.length]}, ${COLORS[(i+1) % COLORS.length]})`,
+                        opacity: .8,
+                      }} />
+                    </div>
+                    <span style={{ width: 60, textAlign: 'right', color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums', fontSize: 12, flexShrink: 0 }}>
+                      {city.vacancy_count}
+                    </span>
+                    {city.avg_salary > 0 && (
+                      <span style={{ width: 110, textAlign: 'right', color: '#10B981', fontSize: 12, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                        {city.avg_salary.toLocaleString('ru-RU')} ₽
+                      </span>
+                    )}
+                  </div>
+                )
+              })
+            })()}
           </div>
         )}
+      </div>
 
-        {/* Salary by skill */}
-        <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-gray-100">Средняя зарплата по навыкам</h2>
-          <div className="rounded-xl bg-surface-3 border border-surface-4 p-6 shadow-card">
-            {salaryData.length === 0 ? (
-              <div className="flex h-64 items-center justify-center text-gray-500">Загрузка…</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart
-                  data={salaryData}
-                  layout="vertical"
-                  margin={{ top: 4, right: 60, bottom: 4, left: 130 }}
-                >
-                  <XAxis
-                    type="number"
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={v => `${(v / 1000).toFixed(0)}к`}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tick={{ fill: '#D1D5DB', fontSize: 13 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={125}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(56,189,248,0.06)' }}
-                    contentStyle={{
-                      background: '#0F131C',
-                      border: '1px solid #1E2636',
-                      borderRadius: 8,
-                      color: '#E5E7EB',
-                      fontSize: 13,
-                    }}
-                    formatter={(v: number) => [`${v.toLocaleString('ru-RU')} ₽`, 'Ср. зарплата']}
-                  />
-                  <Bar dataKey="salary" radius={[0, 4, 4, 0]}>
-                    {salaryData.map((_: any, i: number) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </section>
-
-        {/* City distribution */}
-        <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-gray-100">Вакансии по городам</h2>
-          <div className="rounded-xl bg-surface-3 border border-surface-4 p-6 shadow-card">
-            {cityData.length === 0 ? (
-              <div className="flex h-64 items-center justify-center text-gray-500">Загрузка…</div>
-            ) : (
-              <div className="flex flex-col lg:flex-row items-center gap-6">
-                <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
-                    <Pie
-                      data={cityData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={110}
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(0)}%`
-                      }
-                      labelLine={false}
-                    >
-                      {cityData.map((_: any, i: number) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        background: '#0F131C',
-                        border: '1px solid #1E2636',
-                        borderRadius: 8,
-                        color: '#E5E7EB',
-                        fontSize: 13,
-                      }}
-                      formatter={(v: number) => [`${v} вакансий`, '']}
-                    />
-                    <Legend
-                      wrapperStyle={{ color: '#9CA3AF', fontSize: 13 }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Top skills table */}
-        <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-gray-100">Топ-20 навыков</h2>
-          <div className="rounded-xl bg-surface-3 border border-surface-4 overflow-hidden shadow-card">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-surface-4">
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-gray-400">#</th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-gray-400">Навык</th>
-                  <th className="px-4 py-3 text-right text-xs uppercase tracking-wide text-gray-400">Вакансий</th>
-                  <th className="px-4 py-3 text-right text-xs uppercase tracking-wide text-gray-400">Доля</th>
-                  <th className="px-4 py-3 text-right text-xs uppercase tracking-wide text-gray-400">Ср. зарплата</th>
-                </tr>
-              </thead>
-              <tbody>
-                {skills.map((s: any, i: number) => (
-                  <tr key={s.skill} className="border-b border-surface-4 hover:bg-surface-4/50 transition-colors">
-                    <td className="px-4 py-3 text-gray-500">{i + 1}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ background: COLORS[i % COLORS.length] }}
-                        />
-                        <span className="text-gray-200 font-medium">{s.skill}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-300">{s.vacancy_count}</td>
-                    <td className="px-4 py-3 text-right text-gray-400">{s.percentage?.toFixed(1)}%</td>
-                    <td className="px-4 py-3 text-right text-accent-muted">
-                      {s.avg_salary ? s.avg_salary.toLocaleString('ru-RU') + ' ₽' : '—'}
-                    </td>
-                  </tr>
+      {/* Full skills table */}
+      <div className="glass" style={{ overflow: 'hidden' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>Топ-20 навыков — полная таблица</p>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                {['#', 'Навык', 'Вакансий', 'Доля рынка', 'Ср. зарплата'].map(h => (
+                  <th key={h} style={{ padding: '12px 20px', textAlign: h === '#' || h === 'Вакансий' || h === 'Доля рынка' || h === 'Ср. зарплата' ? 'right' : 'left',
+                    fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+                    {h}
+                  </th>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              </tr>
+            </thead>
+            <tbody>
+              {skills.map((s: any, i: number) => (
+                <tr key={s.skill} style={{ borderBottom: '1px solid rgba(255,255,255,.04)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.02)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <td style={{ padding: '12px 20px', textAlign: 'right', color: 'var(--text-3)', fontSize: 11, width: 40 }}>{i + 1}</td>
+                  <td style={{ padding: '12px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[i % COLORS.length], flexShrink: 0, boxShadow: `0 0 6px ${COLORS[i % COLORS.length]}80` }} />
+                      <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{s.skill}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px 20px', textAlign: 'right', color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{s.vacancy_count}</td>
+                  <td style={{ padding: '12px 20px', textAlign: 'right' }}>
+                    <span style={{ color: 'var(--text-3)' }}>{s.percentage?.toFixed(1)}%</span>
+                  </td>
+                  <td style={{ padding: '12px 20px', textAlign: 'right', color: '#10B981', fontVariantNumeric: 'tabular-nums' }}>
+                    {s.avg_salary ? s.avg_salary.toLocaleString('ru-RU') + ' ₽' : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
