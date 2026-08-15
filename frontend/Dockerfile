@@ -5,7 +5,7 @@ WORKDIR /app
 # Install dependencies
 FROM base AS dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install --no-audit --no-fund
 
 # Development stage
 FROM dependencies AS development
