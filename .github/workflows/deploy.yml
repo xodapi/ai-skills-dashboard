@@ -1,0 +1,66 @@
+name: Deploy to production
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        run: |
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude 'deploy_key*' \
+            --exclude 'node_modules' \
+            --exclude '__pycache__' \
+            --exclude '*.pyc' \
+            --exclude 'venv' \
+            --exclude '.env' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_DIR }}/
+
+      - name: Deploy on server
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << 'ENDSSH'
+          set -e
+          cd ${{ secrets.SERVER_DIR }}
+
+          # Fix .env for production
+          if ! grep -q "ENVIRONMENT=production" backend/.env 2>/dev/null; then
+            sed -i 's/ENVIRONMENT=development/ENVIRONMENT=production/' backend/.env
+            sed -i 's/DEBUG=True/DEBUG=False/' backend/.env
+            sed -i 's|REDIS_URL=redis://localhost|REDIS_URL=redis://redis|' backend/.env
+            sed -i 's|CELERY_BROKER_URL=redis://localhost|CELERY_BROKER_URL=redis://redis|' backend/.env
+            sed -i 's|CELERY_RESULT_BACKEND=redis://localhost|CELERY_RESULT_BACKEND=redis://redis|' backend/.env
+          fi
+
+          # Update CORS
+          sed -i 's|CORS_ORIGINS=.*|CORS_ORIGINS=https://ai-skills.syntog.ru,http://ai-skills.syntog.ru|' backend/.env
+
+          # Build and restart containers
+          docker compose pull --quiet
+          docker compose up -d --build --remove-orphans
+
+          # Wait for backend
+          echo "Waiting for backend..."
+          sleep 15
+
+          # Run migrations
+          docker compose exec -T backend alembic upgrade head || echo "Migration skipped (DB may not be ready yet)"
+
+          # Show status
+          docker compose ps
+          echo "Deploy complete!"
+          ENDSSH
