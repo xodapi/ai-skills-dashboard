@@ -23,7 +23,7 @@ email-validator==2.2.0
 
 # HTTP client for APIs
 httpx==0.27.2
-aiohttp==3.10.10
+aiohttp==3.14.3
 
 # HTML parsing for web scraping
 beautifulsoup4==4.12.3
