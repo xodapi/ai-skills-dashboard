@@ -14,6 +14,19 @@ DEMO_VACANCIES = generate_demo_vacancies(100)
 DEMO_STATS = generate_skill_stats(DEMO_VACANCIES)
 
 
+@router.get("/health")
+async def health_check():
+    """API health check endpoint."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "demo_data": {
+            "vacancies": len(DEMO_VACANCIES),
+            "skills": len(DEMO_STATS)
+        }
+    }
+
+
 @router.get("/vacancies")
 async def get_vacancies(
     skip: int = Query(0, ge=0),
