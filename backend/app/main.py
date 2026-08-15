@@ -12,8 +12,6 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.api.v1 import api_router
-from app.middleware.logging import LoggingMiddleware
-from app.middleware.error_handler import ErrorHandlerMiddleware
 
 
 @asynccontextmanager
@@ -47,10 +45,6 @@ app.add_middleware(
 
 # Compression middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-
-# Custom middleware
-app.add_middleware(LoggingMiddleware)
-app.add_middleware(ErrorHandlerMiddleware)
 
 # Include API routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
