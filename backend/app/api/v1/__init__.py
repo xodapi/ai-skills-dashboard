@@ -3,36 +3,13 @@ API v1 router.
 """
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import vacancies, skills, trends, map_data, websocket
+# Import demo endpoints with working data
+from app.api.v1.endpoints import demo
 
 api_router = APIRouter()
 
+# Use demo endpoints with sample data
 api_router.include_router(
-    vacancies.router,
-    prefix="/vacancies",
-    tags=["vacancies"]
-)
-
-api_router.include_router(
-    skills.router,
-    prefix="/skills",
-    tags=["skills"]
-)
-
-api_router.include_router(
-    trends.router,
-    prefix="/trends",
-    tags=["trends"]
-)
-
-api_router.include_router(
-    map_data.router,
-    prefix="/map",
-    tags=["map"]
-)
-
-api_router.include_router(
-    websocket.router,
-    prefix="/ws",
-    tags=["websocket"]
+    demo.router,
+    tags=["demo"]
 )
