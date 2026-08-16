@@ -62,23 +62,20 @@ jobs:
             exit 1
           fi
           
-          # Check for uncompiled .tsx imports
-          # Save to file to avoid shell variable issues
-          grep -ra 'import.*from.*\.tsx' . 2>/dev/null > /tmp/tsx_check.txt || true
+          # Check for uncompiled .tsx imports (exclude source maps)
+          TSX_FILES=$(grep -ral --exclude='*.map' 'import.*from.*\.tsx' . 2>/dev/null || true)
           
-          if [ -s /tmp/tsx_check.txt ]; then
+          if [ -n "$TSX_FILES" ]; then
             echo "❌ Uncompiled .tsx code in build!"
-            echo "File size: $(wc -c < /tmp/tsx_check.txt) bytes, $(wc -l < /tmp/tsx_check.txt) lines"
-            echo "Found .tsx imports in compiled output:"
-            cat -A /tmp/tsx_check.txt | head -20
-            echo ""
             echo "Files containing .tsx imports:"
-            grep -ral 'import.*from.*\.tsx' . 2>/dev/null || true
-            rm -f /tmp/tsx_check.txt
+            echo "$TSX_FILES"
+            echo ""
+            echo "Sample matches (first 5 lines from first file):"
+            FIRST_FILE=$(echo "$TSX_FILES" | head -1)
+            grep -n 'import.*from.*\.tsx' "$FIRST_FILE" 2>/dev/null | head -5 || echo "(no matches or binary file)"
             exit 1
           fi
           
-          rm -f /tmp/tsx_check.txt
           echo "✅ Build clean"
 
   deploy:
