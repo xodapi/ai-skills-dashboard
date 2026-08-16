@@ -57,26 +57,27 @@ jobs:
           cd frontend/dist
           
           # Check for Vite import errors (skip binary files)
-          IMPORT_ERRORS=$(grep -rI "Failed to resolve import" . 2>/dev/null || true)
-          if [ -n "$IMPORT_ERRORS" ]; then
+          if grep -rI "Failed to resolve import" . 2>/dev/null; then
             echo "❌ Vite import errors in build!"
-            echo "$IMPORT_ERRORS"
             exit 1
           fi
           
-          # Check for uncompiled .tsx imports (including in binary/minified files)
-          # Use -a to treat binary files as text, since minified JS might trigger binary detection
-          TSX_MATCHES=$(grep -ra 'import.*from.*\.tsx' . 2>/dev/null || true)
-          if [ -n "$TSX_MATCHES" ]; then
+          # Check for uncompiled .tsx imports
+          # Save to file to avoid shell variable issues
+          grep -ra 'import.*from.*\.tsx' . 2>/dev/null > /tmp/tsx_check.txt || true
+          
+          if [ -s /tmp/tsx_check.txt ]; then
             echo "❌ Uncompiled .tsx code in build!"
             echo "Found .tsx imports in compiled output:"
-            echo "$TSX_MATCHES" | head -20
+            head -20 /tmp/tsx_check.txt
             echo ""
             echo "Files containing .tsx imports:"
             grep -ral 'import.*from.*\.tsx' . 2>/dev/null || true
+            rm -f /tmp/tsx_check.txt
             exit 1
           fi
           
+          rm -f /tmp/tsx_check.txt
           echo "✅ Build clean"
 
   deploy:
