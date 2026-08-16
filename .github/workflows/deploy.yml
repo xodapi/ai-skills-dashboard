@@ -3,6 +3,7 @@ name: Deploy to production
 on:
   push:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -17,50 +18,72 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Sync files to server
-        run: |
-          rsync -avz --delete \
-            --exclude '.git' \
-            --exclude 'deploy_key*' \
-            --exclude 'node_modules' \
-            --exclude '__pycache__' \
-            --exclude '*.pyc' \
-            --exclude 'venv' \
-            --exclude '.env' \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_DIR }}/
-
-      - name: Deploy on server
+      - name: Deploy via git pull
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash -s << 'ENDSSH'
           set -e
           cd ${{ secrets.SERVER_DIR }}
 
+          echo "📦 Fetching latest changes from GitHub..."
+          git fetch origin master
+          
+          before=$(git rev-parse --short HEAD)
+          echo "Current commit: $before"
+          
+          git reset --hard origin/master
+          
+          after=$(git rev-parse --short HEAD)
+          echo "Updated to commit: $after"
+
           # Fix .env for production
-          if ! grep -q "ENVIRONMENT=production" backend/.env 2>/dev/null; then
-            sed -i 's/ENVIRONMENT=development/ENVIRONMENT=production/' backend/.env
-            sed -i 's/DEBUG=True/DEBUG=False/' backend/.env
-            sed -i 's|REDIS_URL=redis://localhost|REDIS_URL=redis://redis|' backend/.env
-            sed -i 's|CELERY_BROKER_URL=redis://localhost|CELERY_BROKER_URL=redis://redis|' backend/.env
-            sed -i 's|CELERY_RESULT_BACKEND=redis://localhost|CELERY_RESULT_BACKEND=redis://redis|' backend/.env
+          if [ -f backend/.env ]; then
+            if ! grep -q "ENVIRONMENT=production" backend/.env; then
+              sed -i 's/ENVIRONMENT=development/ENVIRONMENT=production/' backend/.env
+              sed -i 's/DEBUG=True/DEBUG=False/' backend/.env
+              sed -i 's|REDIS_URL=redis://localhost|REDIS_URL=redis://redis|' backend/.env
+              sed -i 's|CELERY_BROKER_URL=redis://localhost|CELERY_BROKER_URL=redis://redis|' backend/.env
+              sed -i 's|CELERY_RESULT_BACKEND=redis://localhost|CELERY_RESULT_BACKEND=redis://redis|' backend/.env
+            fi
+            sed -i 's|CORS_ORIGINS=.*|CORS_ORIGINS=https://ai-skills.syntog.ru,http://ai-skills.syntog.ru|' backend/.env
           fi
 
-          # Update CORS
-          sed -i 's|CORS_ORIGINS=.*|CORS_ORIGINS=https://ai-skills.syntog.ru,http://ai-skills.syntog.ru|' backend/.env
-
-          # Build and restart containers
-          docker compose pull --quiet
+          echo "🐳 Restarting Docker containers..."
           docker compose up -d --build --remove-orphans
 
-          # Wait for backend
-          echo "Waiting for backend..."
-          sleep 15
+          echo "⏳ Waiting for services to start..."
+          sleep 20
 
-          # Run migrations
-          docker compose exec -T backend alembic upgrade head || echo "Migration skipped (DB may not be ready yet)"
+          # Run migrations if backend is up
+          docker compose exec -T backend alembic upgrade head 2>/dev/null || echo "⚠️  Migration skipped"
 
-          # Show status
+          echo "✅ Docker status:"
           docker compose ps
-          echo "Deploy complete!"
+          
+          echo ""
+          echo "🎉 Deploy complete: $before → $after"
           ENDSSH
+
+      - name: Health check
+        run: |
+          echo "🔍 Running health checks..."
+          sleep 5
+          
+          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://ai-skills.syntog.ru)
+          if [ "$response" != "200" ]; then
+            echo "❌ Health check failed: homepage returned $response"
+            exit 1
+          fi
+          
+          content=$(curl -s --max-time 10 https://ai-skills.syntog.ru)
+          if echo "$content" | grep -q "Failed to resolve import"; then
+            echo "❌ Vite import errors detected - build failed!"
+            exit 1
+          fi
+          
+          if echo "$content" | grep -q "import.*from.*\\.tsx"; then
+            echo "❌ Uncompiled .tsx code detected - white screen!"
+            exit 1
+          fi
+          
+          echo "✅ Health check passed!"
