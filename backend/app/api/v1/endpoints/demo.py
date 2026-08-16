@@ -243,9 +243,10 @@ async def get_training_modules():
 @router.get("/training/modules/{skill}")
 async def get_training_module(skill: str):
     """Get full training module for a specific skill."""
+    from fastapi import HTTPException
     from app.training_exercises import TRAINING_MODULES
     
     if skill not in TRAINING_MODULES:
-        return {"error": "Module not found"}, 404
+        raise HTTPException(status_code=404, detail=f"Module '{skill}' not found")
     
     return TRAINING_MODULES[skill]
