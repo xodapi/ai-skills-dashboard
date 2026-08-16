@@ -68,8 +68,9 @@ jobs:
           
           if [ -s /tmp/tsx_check.txt ]; then
             echo "❌ Uncompiled .tsx code in build!"
+            echo "File size: $(wc -c < /tmp/tsx_check.txt) bytes, $(wc -l < /tmp/tsx_check.txt) lines"
             echo "Found .tsx imports in compiled output:"
-            head -20 /tmp/tsx_check.txt
+            cat -A /tmp/tsx_check.txt | head -20
             echo ""
             echo "Files containing .tsx imports:"
             grep -ral 'import.*from.*\.tsx' . 2>/dev/null || true
