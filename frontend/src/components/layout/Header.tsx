@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher'
+import { useAuth } from '@/context/AuthContext'
 
 const NAV = [
   { name: 'Dashboard', href: '/', icon: '◈' },
@@ -20,6 +21,7 @@ const NAV = [
 
 export function Header() {
   const { pathname } = useLocation()
+  const { user, isAuthenticated, login, isLoading } = useAuth()
 
   return (
     <header style={{
@@ -77,9 +79,46 @@ export function Header() {
             })}
           </div>
 
-          {/* Right: ThemeSwitcher + Live badge */}
+          {/* Right: Auth + ThemeSwitcher + Live badge */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <ThemeSwitcher />
+
+            {/* Auth button */}
+            {!isLoading && (
+              isAuthenticated && user ? (
+                <Link to="/profile" style={{
+                  display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+                  padding: '5px 10px 5px 5px', borderRadius: 99,
+                  background: 'var(--surface-4)', border: '1px solid var(--border)',
+                  transition: 'all .2s',
+                }}>
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.login}
+                      style={{ width: 24, height: 24, borderRadius: '50%', display: 'block' }} />
+                  ) : (
+                    <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-dim)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 900, color: 'var(--accent)' }}>
+                      {user.login[0].toUpperCase()}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)' }}>
+                    {user.name ?? user.login}
+                  </span>
+                </Link>
+              ) : (
+                <button onClick={login}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
+                    background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer',
+                    transition: 'opacity .2s',
+                  }}>
+                  <span style={{ fontSize: 14 }}>⬡</span> GitHub войти
+                </button>
+              )
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span className="pulse-dot" />
               <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>

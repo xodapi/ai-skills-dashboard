@@ -15,6 +15,8 @@ import { SalaryCalculator } from '@/pages/SalaryCalculator'
 import { RoleRoadmap } from '@/pages/RoleRoadmap'
 import { AdaptiveAssessment } from '@/pages/AdaptiveAssessment'
 import { SkillsForecast } from '@/pages/SkillsForecast'
+import { AuthCallback } from '@/pages/AuthCallback'
+import { Profile } from '@/pages/Profile'
 
 function App() {
   return (
@@ -35,7 +37,9 @@ function App() {
         <Route path="roadmap" element={<RoleRoadmap />} />
         <Route path="assessment" element={<AdaptiveAssessment />} />
         <Route path="forecast" element={<SkillsForecast />} />
+        <Route path="profile" element={<Profile />} />
       </Route>
+      <Route path="auth/callback" element={<AuthCallback />} />
     </Routes>
   )
 }
