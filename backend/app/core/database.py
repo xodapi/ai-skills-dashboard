@@ -54,7 +54,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     """Initialize database connection pool."""
     # Import models to register them with Base
-    from app.models import vacancy, skill, trend  # noqa: F401
+    from app.models import vacancy, skill, trend, user  # noqa: F401
     
     # Create tables if they don't exist
     async with engine.begin() as conn:

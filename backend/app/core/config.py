@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = Field(default="HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
     
+    # GitHub OAuth
+    GITHUB_CLIENT_ID: str = Field(default="")
+    GITHUB_CLIENT_SECRET: str = Field(default="")
+    GITHUB_REDIRECT_URI: str = Field(default="http://localhost:3000/auth/callback")
+    
     # CORS
     CORS_ORIGINS: str = Field(
         default="http://localhost:3000"
