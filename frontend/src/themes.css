@@ -1,0 +1,163 @@
+/*
+ * themes.css — Multi-theme system for AI Skills Dashboard
+ * Four themes: dark (default), light, hacker, steampunk
+ * Toggle by setting [data-theme="light|hacker|steampunk"] on <html>
+ */
+
+/* ═══════════════════════════════════════════════════════════
+   DARK (default)
+═══════════════════════════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+  --bg:         #030508;
+  --surface-1:  #030508;
+  --surface-2:  #080C14;
+  --surface-3:  #0D1220;
+  --surface-4:  #131929;
+  --surface-5:  #1A2235;
+
+  --accent:       #22D3EE;
+  --accent-dim:   rgba(34,211,238,.12);
+  --accent-glow:  rgba(34,211,238,.35);
+  --accent-2:     #818CF8;
+  --success:      #10B981;
+  --danger:       #F43F5E;
+  --warning:      #F59E0B;
+
+  --text-1: #F1F5F9;
+  --text-2: #CBD5E1;
+  --text-3: #64748B;
+  --text-4: #334155;
+
+  --border:     rgba(255,255,255,.06);
+  --border-hi:  rgba(34,211,238,.25);
+
+  --glow-sm:  0 0 12px rgba(34,211,238,.20);
+  --glow-md:  0 0 30px rgba(34,211,238,.15), 0 0 60px rgba(34,211,238,.06);
+
+  --glass-bg:     rgba(13,18,32,.7);
+  --glass-border: rgba(255,255,255,.06);
+  --glass-hover-border: rgba(34,211,238,.25);
+
+  --grid-color: rgba(34,211,238,.03);
+  --spotlight: radial-gradient(ellipse, rgba(34,211,238,.07) 0%, transparent 65%);
+
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIGHT
+═══════════════════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg:         #F8FAFC;
+  --surface-1:  #FFFFFF;
+  --surface-2:  #F1F5F9;
+  --surface-3:  #E8EEF6;
+  --surface-4:  #DDE6F0;
+  --surface-5:  #D1DCE8;
+
+  --accent:       #0891B2;
+  --accent-dim:   rgba(8,145,178,.10);
+  --accent-glow:  rgba(8,145,178,.25);
+  --accent-2:     #6366F1;
+  --success:      #059669;
+  --danger:       #E11D48;
+  --warning:      #D97706;
+
+  --text-1: #0F172A;
+  --text-2: #1E293B;
+  --text-3: #475569;
+  --text-4: #94A3B8;
+
+  --border:     rgba(0,0,0,.09);
+  --border-hi:  rgba(8,145,178,.35);
+
+  --glow-sm:  0 0 12px rgba(8,145,178,.12);
+  --glow-md:  0 2px 20px rgba(8,145,178,.10), 0 8px 40px rgba(0,0,0,.06);
+
+  --glass-bg:     rgba(255,255,255,.85);
+  --glass-border: rgba(0,0,0,.08);
+  --glass-hover-border: rgba(8,145,178,.30);
+
+  --grid-color: rgba(8,145,178,.04);
+  --spotlight: radial-gradient(ellipse, rgba(99,102,241,.06) 0%, transparent 65%);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HACKER (terminal green-on-black)
+═══════════════════════════════════════════════════════════ */
+[data-theme="hacker"] {
+  --bg:         #000000;
+  --surface-1:  #000000;
+  --surface-2:  #0A0A0A;
+  --surface-3:  #0F1205;
+  --surface-4:  #141A06;
+  --surface-5:  #1A2208;
+
+  --accent:       #00FF41;
+  --accent-dim:   rgba(0,255,65,.10);
+  --accent-glow:  rgba(0,255,65,.45);
+  --accent-2:     #00FF41;
+  --success:      #00CC33;
+  --danger:       #FF0033;
+  --warning:      #FFCC00;
+
+  --text-1: #00FF41;
+  --text-2: #00CC33;
+  --text-3: #007A1F;
+  --text-4: #004410;
+
+  --border:     rgba(0,255,65,.12);
+  --border-hi:  rgba(0,255,65,.45);
+
+  --glow-sm:  0 0 10px rgba(0,255,65,.35);
+  --glow-md:  0 0 25px rgba(0,255,65,.25), 0 0 60px rgba(0,255,65,.10);
+
+  --glass-bg:     rgba(0,12,3,.8);
+  --glass-border: rgba(0,255,65,.12);
+  --glass-hover-border: rgba(0,255,65,.45);
+
+  --grid-color: rgba(0,255,65,.05);
+  --spotlight: radial-gradient(ellipse, rgba(0,255,65,.08) 0%, transparent 65%);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STEAMPUNK (brass, copper, sepia on dark)
+═══════════════════════════════════════════════════════════ */
+[data-theme="steampunk"] {
+  --bg:         #1A0E05;
+  --surface-1:  #1A0E05;
+  --surface-2:  #231508;
+  --surface-3:  #2C1C0C;
+  --surface-4:  #352310;
+  --surface-5:  #3E2A14;
+
+  --accent:       #D4943A;
+  --accent-dim:   rgba(212,148,58,.15);
+  --accent-glow:  rgba(212,148,58,.40);
+  --accent-2:     #C4714A;
+  --success:      #7FA85C;
+  --danger:       #C44A3A;
+  --warning:      #E8B84B;
+
+  --text-1: #F5E6C8;
+  --text-2: #D4B896;
+  --text-3: #8B7355;
+  --text-4: #5C4A30;
+
+  --border:     rgba(212,148,58,.15);
+  --border-hi:  rgba(212,148,58,.45);
+
+  --glow-sm:  0 0 12px rgba(212,148,58,.25);
+  --glow-md:  0 0 30px rgba(212,148,58,.18), 0 0 60px rgba(196,113,74,.08);
+
+  --glass-bg:     rgba(26,14,5,.75);
+  --glass-border: rgba(212,148,58,.15);
+  --glass-hover-border: rgba(212,148,58,.40);
+
+  --grid-color: rgba(212,148,58,.04);
+  --spotlight: radial-gradient(ellipse, rgba(212,148,58,.08) 0%, transparent 65%);
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 
 interface TrainingModule {
@@ -15,7 +15,15 @@ interface TrainingModule {
   }>
 }
 
-// Training content database (можно потом вынести в API)
+// Simple markdown parser (bold, lists, code)
+function parseMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #22D3EE; font-weight: 700;">$1</strong>')
+    .replace(/`([^`]+)`/g, '<code style="background: rgba(34,211,238,.15); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 13px; color: #22D3EE;">$1</code>')
+    .replace(/^• (.+)$/gm, '<div style="padding-left: 20px; margin: 6px 0;">• $1</div>')
+}
+
+// Training content database
 const TRAINING_MODULES: Record<string, TrainingModule> = {
   'Python': {
     title: 'Python для AI/ML',
@@ -27,7 +35,7 @@ const TRAINING_MODULES: Record<string, TrainingModule> = {
 • **Async/await** — асинхронное программирование для I/O операций
 
 В ML используется для data preprocessing, feature engineering, model training через библиотеки NumPy, Pandas, Scikit-learn.`,
-    audio_script: 'Привет! Сегодня изучаем Python для AI и ML. Python стал стандартом в машинном обучении благодаря простому синтаксису и богатой экосистеме. Начнём с list comprehensions — это способ создавать списки в одну строку. Вместо цикла for, вы пишете квадратные скобки с выражением. Например, квадраты чисел от нуля до девяти: открывающая скобка, x в степени два, for x in range десять, закрывающая скобка. Generators работают похоже, но используют круглые скобки и возвращают элементы по запросу, экономя память. Type hints добавляют типы переменных через двоеточие — это помогает IDE подсказывать ошибки. Async await используется для параллельных задач вроде загрузки данных.',
+    audio_script: 'Привет! Сегодня изучаем Python для AI и ML. Python стал стандартом в машинном обучении благодаря простому синтаксису и богатой экосистеме. Начнём с list comprehensions — это способ создавать списки в одну строку. Вместо цикла for, вы пишете квадратные скобки с выражением. Например, квадраты чисел от нуля до девяти. Generators работают похоже, но используют круглые скобки и возвращают элементы по запросу, экономя память. Type hints добавляют типы переменных через двоеточие — это помогает IDE подсказывать ошибки. Async await используется для параллельных задач вроде загрузки данных.',
     exercises: [
       {
         type: 'quiz',
@@ -50,7 +58,7 @@ const TRAINING_MODULES: Record<string, TrainingModule> = {
   },
   'PyTorch': {
     title: 'PyTorch Deep Learning',
-    theory: `PyTorch — фреймворк для глубокого обучения от Meta.
+    theory: `PyTorch — фреймворк для глубокого обучения, разработанный группой исследователей (в т.ч. из организаций, признанных в РФ иностранными агентами).
 
 • **Tensors** — многомерные массивы с GPU ускорением
 • **Autograd** — автоматическое дифференцирование для backpropagation
@@ -58,7 +66,7 @@ const TRAINING_MODULES: Record<string, TrainingModule> = {
 • **DataLoader** — эффективная загрузка данных батчами
 
 Используется в research, CV, NLP. Более гибкий чем TensorFlow, но требует больше кода.`,
-    audio_script: 'Изучаем PyTorch — фреймворк глубокого обучения. PyTorch создан Facebook и стал любимым инструментом исследователей. Главная абстракция — тензоры. Это многомерные массивы как в NumPy, но с поддержкой GPU. Чтобы перенести тензор на видеокарту, вызовите метод cuda или to с параметром cuda. Autograd автоматически считает градиенты. Вы строите граф вычислений, вызываете backward на loss, и PyTorch сам считает производные. nn Module — базовый класс для слоёв и моделей. Наследуйтесь от него, определяйте forward метод, и PyTorch сам создаст backward. DataLoader оборачивает датасет и возвращает батчи — это ускоряет обучение.',
+    audio_script: 'Изучаем PyTorch — фреймворк глубокого обучения. PyTorch стал любимым инструментом исследователей. Главная абстракция — тензоры. Это многомерные массивы как в NumPy, но с поддержкой GPU. Чтобы перенести тензор на видеокарту, вызовите метод cuda или to с параметром cuda. Autograd автоматически считает градиенты. Вы строите граф вычислений, вызываете backward на loss, и PyTorch сам считает производные. nn Module — базовый класс для слоёв и моделей. Наследуйтесь от него, определяйте forward метод, и PyTorch сам создаст backward. DataLoader оборачивает датасет и возвращает батчи — это ускоряет обучение.',
     exercises: [
       {
         type: 'quiz',
@@ -104,6 +112,36 @@ const TRAINING_MODULES: Record<string, TrainingModule> = {
       },
     ],
   },
+  'Kubernetes': {
+    title: 'Kubernetes Orchestration',
+    theory: `Kubernetes (K8s) — оркестрация контейнеров в production.
+
+• **Pod** — минимальная единица деплоя (1+ контейнеров)
+• **Deployment** — декларативное управление репликами pods
+• **Service** — load balancer и discovery для pods
+• **Ingress** — маршрутизация HTTP/HTTPS трафика
+
+Используется для масштабируемого deployment ML моделей и микросервисов.`,
+    audio_script: 'Изучаем Kubernetes для production ML систем. Kubernetes автоматизирует деплой, масштабирование и управление контейнерами. Pod — базовая единица. Это один или несколько контейнеров, работающих вместе. Deployment описывает желаемое состояние — сколько реплик нужно, какой образ использовать. Kubernetes сам следит чтобы реальность совпадала с декларацией. Service создаёт стабильный endpoint для группы pods — даже если поды перезапускаются, Service остаётся доступным. Ingress управляет внешним трафиком — проксирует запросы к нужным сервисам по URL путям.',
+    exercises: [
+      {
+        type: 'quiz',
+        question: 'Что такое Pod в Kubernetes?',
+        options: [
+          'Группа нод в кластере',
+          'Минимальная единица деплоя — 1+ контейнеров',
+          'Конфигурационный файл',
+          'Сетевой namespace',
+        ],
+        correct_answer: 1,
+      },
+      {
+        type: 'terminal',
+        question: 'Получите список всех pods в namespace default',
+        solution: 'kubectl get pods -n default',
+      },
+    ],
+  },
 }
 
 export function Trainer() {
@@ -114,7 +152,6 @@ export function Trainer() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const decodedSkill = skill ? decodeURIComponent(skill) : ''
   const module = TRAINING_MODULES[decodedSkill]
@@ -135,7 +172,7 @@ export function Trainer() {
           <h2 style={{ fontSize: 20, fontWeight: 800, color: '#F1F5F9', marginBottom: 8 }}>
             Тренажёр в разработке
           </h2>
-          <p style={{ fontSize: 14, color: 'var(--text-3)' }}>
+          <p style={{ fontSize: 14, color: '#94A3B8' }}>
             Модуль для навыка "{decodedSkill}" скоро появится
           </p>
         </div>
@@ -146,10 +183,8 @@ export function Trainer() {
   const exercise = module.exercises[currentExercise]
   const progress = ((currentExercise + 1) / module.exercises.length) * 100
 
-  // Text-to-speech simulation (в реальности нужен TTS API)
   const playAudio = () => {
     setIsPlaying(true)
-    // Эмуляция: в реальности здесь вызов Web Speech API или ElevenLabs
     const utterance = new SpeechSynthesisUtterance(module.audio_script)
     utterance.lang = 'ru-RU'
     utterance.rate = 0.9
@@ -167,7 +202,6 @@ export function Trainer() {
       return selectedAnswer === exercise.correct_answer
     }
     if (exercise.type === 'code') {
-      // Упрощённая проверка — в реале нужен sandbox
       return userCode.trim().includes(exercise.solution?.split('=')[1]?.trim() || '')
     }
     return false
@@ -191,7 +225,7 @@ export function Trainer() {
         }}>
           {module.title}
         </h1>
-        <p style={{ fontSize: 14, color: 'var(--text-3)', maxWidth: 680, lineHeight: 1.7 }}>
+        <p style={{ fontSize: 14, color: '#94A3B8', maxWidth: 680, lineHeight: 1.7 }}>
           Теория + практические задания + аудио объяснение. Прогресс: {Math.round(progress)}%
         </p>
         
@@ -214,7 +248,7 @@ export function Trainer() {
           style={{
             padding: '12px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600,
             background: activeTab === 'theory' ? 'rgba(34,211,238,.12)' : 'rgba(255,255,255,.03)',
-            color: activeTab === 'theory' ? '#22D3EE' : 'var(--text-2)',
+            color: activeTab === 'theory' ? '#22D3EE' : '#94A3B8',
             border: activeTab === 'theory' ? '1px solid rgba(34,211,238,.3)' : '1px solid rgba(255,255,255,.08)',
             cursor: 'pointer', transition: 'all .2s',
           }}>
@@ -225,7 +259,7 @@ export function Trainer() {
           style={{
             padding: '12px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600,
             background: activeTab === 'exercises' ? 'rgba(16,185,129,.12)' : 'rgba(255,255,255,.03)',
-            color: activeTab === 'exercises' ? '#10B981' : 'var(--text-2)',
+            color: activeTab === 'exercises' ? '#10B981' : '#94A3B8',
             border: activeTab === 'exercises' ? '1px solid rgba(16,185,129,.3)' : '1px solid rgba(255,255,255,.08)',
             cursor: 'pointer', transition: 'all .2s',
           }}>
@@ -236,19 +270,20 @@ export function Trainer() {
       {activeTab === 'theory' ? (
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
           
-          {/* Theory text */}
+          {/* Theory text with markdown */}
           <div className="glass" style={{ padding: 28 }}>
             <h3 style={{ fontSize: 18, fontWeight: 800, color: '#F1F5F9', marginBottom: 16 }}>Теория</h3>
-            <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
-              {module.theory}
-            </div>
+            <div 
+              style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.8, whiteSpace: 'pre-line' }}
+              dangerouslySetInnerHTML={{ __html: parseMarkdown(module.theory) }}
+            />
           </div>
 
           {/* Audio player */}
           <div className="glass" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 800, color: '#F1F5F9', marginBottom: 8 }}>🎧 Аудио объяснение</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6 }}>
+              <p style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.6 }}>
                 Слушайте теорию в удобном формате. Используется синтез речи.
               </p>
             </div>
@@ -282,8 +317,8 @@ export function Trainer() {
               )}
             </div>
 
-            <div style={{ fontSize: 11, color: 'var(--text-3)', padding: 12, background: 'rgba(255,255,255,.02)', borderRadius: 8 }}>
-              <strong style={{ color: 'var(--text-2)' }}>Скрипт:</strong> {module.audio_script.slice(0, 150)}...
+            <div style={{ fontSize: 11, color: '#94A3B8', padding: 12, background: 'rgba(255,255,255,.02)', borderRadius: 8 }}>
+              <strong style={{ color: '#CBD5E1' }}>Скрипт:</strong> {module.audio_script.slice(0, 150)}...
             </div>
           </div>
         </div>
@@ -305,7 +340,7 @@ export function Trainer() {
                   {exercise.type === 'code' ? '💻 Код' : exercise.type === 'quiz' ? '❓ Тест' : '⌨️ Terminal'}
                 </span>
               </div>
-              <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7 }}>{exercise.question}</p>
+              <p style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.7 }}>{exercise.question}</p>
             </div>
 
             {/* Exercise UI */}
@@ -329,8 +364,8 @@ export function Trainer() {
                           ? (isCorrect ? '1px solid rgba(16,185,129,.3)' : isSelected ? '1px solid rgba(244,63,94,.3)' : '1px solid rgba(255,255,255,.06)')
                           : (isSelected ? '1px solid rgba(34,211,238,.3)' : '1px solid rgba(255,255,255,.06)'),
                         color: showResult
-                          ? (isCorrect ? '#10B981' : isSelected ? '#F43F5E' : 'var(--text-2)')
-                          : (isSelected ? '#22D3EE' : 'var(--text-1)'),
+                          ? (isCorrect ? '#10B981' : isSelected ? '#F43F5E' : '#94A3B8')
+                          : (isSelected ? '#22D3EE' : '#CBD5E1'),
                         cursor: showSolution ? 'not-allowed' : 'pointer',
                         fontWeight: isSelected || isCorrect ? 600 : 400,
                       }}>
@@ -350,7 +385,7 @@ export function Trainer() {
                 disabled={showSolution}
                 style={{
                   width: '100%', minHeight: 180, padding: 16, borderRadius: 10,
-                  background: 'rgba(8,12,20,.6)', color: '#F1F5F9', border: '1px solid rgba(255,255,255,.1)',
+                  background: 'rgba(8,12,20,.6)', color: '#E2E8F0', border: '1px solid rgba(255,255,255,.1)',
                   fontFamily: 'var(--font-mono)', fontSize: 13, lineHeight: 1.6,
                   resize: 'vertical',
                 }}
@@ -399,7 +434,7 @@ export function Trainer() {
                 border: '1px solid rgba(245,158,11,.2)',
               }}>
                 <p style={{ fontSize: 11, color: '#F59E0B', marginBottom: 6, fontWeight: 600 }}>💡 Решение:</p>
-                <code style={{ fontSize: 12, color: 'var(--text-1)', fontFamily: 'var(--font-mono)' }}>
+                <code style={{ fontSize: 12, color: '#CBD5E1', fontFamily: 'var(--font-mono)' }}>
                   {exercise.solution}
                 </code>
               </div>
@@ -409,8 +444,8 @@ export function Trainer() {
           {/* Hints panel */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div className="glass" style={{ padding: 18 }}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>💡 Подсказка</h4>
-              <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 10 }}>💡 Подсказка</h4>
+              <p style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.6 }}>
                 {exercise.type === 'code' && 'Используйте автодополнение IDE. Не забудьте про отступы.'}
                 {exercise.type === 'quiz' && 'Вернитесь к теории если не уверены. Правильный ответ только один.'}
                 {exercise.type === 'terminal' && 'Скопируйте команду и выполните в своём терминале для практики.'}
@@ -418,7 +453,7 @@ export function Trainer() {
             </div>
 
             <div className="glass" style={{ padding: 18 }}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>📊 Прогресс</h4>
+              <h4 style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 10 }}>📊 Прогресс</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {module.exercises.map((_, i) => (
                   <div key={i} style={{
@@ -429,11 +464,11 @@ export function Trainer() {
                   }}>
                     <span style={{
                       fontSize: 10,
-                      color: i === currentExercise ? '#22D3EE' : i < currentExercise ? '#10B981' : 'var(--text-3)',
+                      color: i === currentExercise ? '#22D3EE' : i < currentExercise ? '#10B981' : '#64748B',
                     }}>
                       {i < currentExercise ? '✓' : i === currentExercise ? '→' : '○'}
                     </span>
-                    <span style={{ fontSize: 11, color: i <= currentExercise ? 'var(--text-1)' : 'var(--text-3)' }}>
+                    <span style={{ fontSize: 11, color: i <= currentExercise ? '#F1F5F9' : '#64748B' }}>
                       Задание {i + 1}
                     </span>
                   </div>
