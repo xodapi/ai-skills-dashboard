@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 const API = '/api/v1'
-const COLORS = ['#22D3EE','#10B981','#818CF8','#F59E0B','#F43F5E','#34D399','#A78BFA','#FB923C','#60A5FA','#4ADE80']
 
 const TIERS = [
   { label: 'Горячий', min: 0.75, color: '#22D3EE', bg: 'rgba(34,211,238,.1)' },

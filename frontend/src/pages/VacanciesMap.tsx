@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 const API = '/api/v1'
@@ -18,21 +18,6 @@ const EMP_LABELS: Record<string, string> = {
   'remote':    'Удалёнка',
   'hybrid':    'Гибрид',
   'part-time': 'Частичная',
-}
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value)
-  const timer = useState<ReturnType<typeof setTimeout> | null>(null)
-
-  const update = useCallback((v: T) => {
-    if (timer[0]) clearTimeout(timer[0])
-    timer[1](setTimeout(() => setDebounced(v), delay))
-  }, [delay, timer])
-
-  // Update on value change
-  useState(() => { update(value) })
-
-  return debounced
 }
 
 interface Vacancy {

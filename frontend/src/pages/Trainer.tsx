@@ -119,8 +119,6 @@ export default function Trainer() {
     return null
   }
 
-  const isCorrect = checkAnswer()
-
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '40px 24px' }}>
       {/* Header */}
@@ -461,3 +459,5 @@ export default function Trainer() {
     </div>
   )
 }
+
+export default Trainer

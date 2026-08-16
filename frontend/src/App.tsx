@@ -9,7 +9,7 @@ import { Trends } from '@/pages/Trends'
 import { Analytics } from '@/pages/Analytics'
 import { Radar } from '@/pages/Radar'
 import { GapAnalyzer } from '@/pages/GapAnalyzer'
-import { Trainer } from '@/pages/Trainer'
+import Trainer from '@/pages/Trainer'
 import { Discovery } from '@/pages/Discovery'
 
 function App() {

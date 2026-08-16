@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Legend, ReferenceLine,
+  CartesianGrid, Legend,
 } from 'recharts'
 
 const API = '/api/v1'
@@ -115,7 +115,7 @@ export function Trends() {
 
         {/* Skills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {SKILL_PRESETS.map((s, i) => {
+          {SKILL_PRESETS.map((s) => {
             const on = selected.includes(s.name)
             const color = COLORS[selected.indexOf(s.name)] ?? s.color
             return (
