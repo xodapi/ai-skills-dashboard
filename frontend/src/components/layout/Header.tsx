@@ -17,6 +17,8 @@ const NAV = [
   { name: 'Roadmap', href: '/roadmap', icon: '🗺️' },
   { name: 'Тест IQ', href: '/assessment', icon: '🧠' },
   { name: 'Прогноз', href: '/forecast', icon: '📈' },
+  { name: 'GitHub', href: '/github-import', icon: '⬡' },
+  { name: 'Навыки', href: '/my-skills', icon: '✎' },
 ]
 
 export function Header() {

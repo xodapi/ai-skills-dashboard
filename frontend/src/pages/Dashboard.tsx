@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   AreaChart, Area, CartesianGrid,
@@ -7,7 +8,7 @@ import {
 const API = '/api/v1'
 const COLORS = ['#22D3EE','#10B981','#818CF8','#F59E0B','#F43F5E','#34D399','#A78BFA','#FB923C','#60A5FA','#4ADE80']
 
-function StatCard({ label, value, sub, delay = 0 }: any) {
+function StatCard({ label, value, sub, delay = 0 }: { label: string; value: string; sub: string; delay?: number }) {
   return (
     <div className={`glass animate-in delay-${delay}`} style={{ padding: 24 }}>
       <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 10 }}>
@@ -21,7 +22,7 @@ function StatCard({ label, value, sub, delay = 0 }: any) {
   )
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: {dataKey: string; name: string; value: number | string}[]; label?: string }) => {
   if (!active || !payload?.length) return null
   return (
     <div style={{
@@ -29,12 +30,109 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#F1F5F9',
     }}>
       <p style={{ color: '#22D3EE', fontWeight: 600, marginBottom: 4 }}>{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.dataKey}>{p.name}: <strong>{typeof p.value === 'number' ? p.value.toLocaleString('ru-RU') : p.value}</strong></p>
       ))}
     </div>
   )
 }
+
+// ── Salary hint widget ────────────────────────────────────────────────────────
+function SalaryHintWidget() {
+  const { data, isFetching } = useQuery({
+    queryKey: ['salary-hint-dash'],
+    queryFn: () =>
+      fetch(`${API}/salary/calculate?skills=Python,Machine+Learning&experience_years=3&employment_type=remote`)
+        .then(r => r.json()),
+    staleTime: 10 * 60_000,
+  })
+
+  return (
+    <div className="glass" style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+          💰 Зарплата · Python + ML · 3 года
+        </p>
+        <Link to="/salary-calculator" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>Рассчитать свою →</Link>
+      </div>
+      {isFetching ? (
+        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>…</p>
+      ) : data?.salary ? (
+        <>
+          <p style={{ fontSize: 36, fontWeight: 900, color: 'var(--accent)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+            {data.salary.median?.toLocaleString('ru-RU')} ₽
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+            {data.salary.min?.toLocaleString('ru-RU')} — {data.salary.max?.toLocaleString('ru-RU')} ₽ · {data.matching_vacancies} вакансий
+          </p>
+          {data.skill_impacts?.slice(0, 3).map((imp: {skill: string; pct_increase: number}) => (
+            <div key={imp.skill} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+              <span style={{ color: 'var(--text-2)' }}>+ {imp.skill}</span>
+              <span style={{ color: '#10B981', fontWeight: 700 }}>+{imp.pct_increase}%</span>
+            </div>
+          ))}
+        </>
+      ) : (
+        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Нет данных</p>
+      )}
+    </div>
+  )
+}
+
+// ── Forecast snapshot widget ──────────────────────────────────────────────────
+function ForecastSnapshotWidget() {
+  const { data, isFetching } = useQuery({
+    queryKey: ['forecast-snapshot-dash'],
+    queryFn: () => fetch(`${API}/skills/forecast?horizon=3m&top_n=20`).then(r => r.json()),
+    staleTime: 10 * 60_000,
+  })
+
+  const rising = data?.items?.filter((i: {trend: string}) => i.trend === 'rising').slice(0, 5) ?? []
+  const falling = data?.items?.filter((i: {trend: string}) => i.trend === 'falling').slice(0, 3) ?? []
+
+  return (
+    <div className="glass" style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+          📈 Прогноз спроса · 3 месяца
+        </p>
+        <Link to="/forecast" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>Все навыки →</Link>
+      </div>
+      {isFetching ? (
+        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>…</p>
+      ) : (
+        <>
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, color: '#10B981', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.06em' }}>↑ Растут</p>
+            {rising.map((s: {skill: string; forecast_growth_pct: number}) => (
+              <div key={s.skill} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-1)', fontWeight: 600 }}>{s.skill}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 50, height: 4, background: 'var(--surface-4)', borderRadius: 99 }}>
+                    <div style={{ height: '100%', borderRadius: 99, background: '#10B981', width: `${Math.min(s.forecast_growth_pct * 5, 100)}%` }} />
+                  </div>
+                  <span style={{ fontSize: 11, color: '#10B981', fontWeight: 700 }}>+{s.forecast_growth_pct.toFixed(1)}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {falling.length > 0 && (
+            <div style={{ marginTop: 4 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: '#F43F5E', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.06em' }}>↓ Падают</p>
+              {falling.map((s: {skill: string; forecast_growth_pct: number}) => (
+                <div key={s.skill} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{s.skill}</span>
+                  <span style={{ fontSize: 11, color: '#F43F5E', fontWeight: 700 }}>{s.forecast_growth_pct.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 
 export function Dashboard() {
   const { data: summary } = useQuery({ queryKey: ['summary'], queryFn: () => fetch(`${API}/stats/summary`).then(r => r.json()) })
@@ -142,7 +240,7 @@ export function Dashboard() {
           <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}>Загрузка…</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {chartData.map((item: any, i: number) => {
+            {chartData.map((item: { name: string; salary: number }, i: number) => {
               const pct = maxSalary ? Math.round((item.salary / maxSalary) * 100) : 0
               return (
                 <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12 }}>
@@ -163,6 +261,32 @@ export function Dashboard() {
             })}
           </div>
         )}
+      </section>
+
+      {/* New feature widgets row */}
+      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <SalaryHintWidget />
+        <ForecastSnapshotWidget />
+      </section>
+
+      {/* Feature CTA row */}
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {[
+          { href: '/salary-calculator', icon: '💰', label: 'Зарплата',  desc: 'Рассчитай по навыкам' },
+          { href: '/roadmap',           icon: '🗺️', label: 'Roadmap',   desc: '8 ролей · шаги обучения' },
+          { href: '/assessment',        icon: '🧠', label: 'Skill IQ',  desc: 'Адаптивный тест' },
+          { href: '/forecast',          icon: '📈', label: 'Прогноз',   desc: 'Спрос на 12 месяцев' },
+        ].map(f => (
+          <Link key={f.href} to={f.href} style={{ textDecoration: 'none' }}>
+            <div className="glass" style={{ padding: '16px 18px', borderRadius: 14, transition: 'border-color .15s', border: '1px solid var(--border)' }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent) 35%, transparent)')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+              <p style={{ fontSize: 22, marginBottom: 6 }}>{f.icon}</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginBottom: 3 }}>{f.label}</p>
+              <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{f.desc}</p>
+            </div>
+          </Link>
+        ))}
       </section>
 
     </div>

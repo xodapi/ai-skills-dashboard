@@ -17,6 +17,8 @@ import { AdaptiveAssessment } from '@/pages/AdaptiveAssessment'
 import { SkillsForecast } from '@/pages/SkillsForecast'
 import { AuthCallback } from '@/pages/AuthCallback'
 import { Profile } from '@/pages/Profile'
+import { GitHubImport } from '@/pages/GitHubImport'
+import { MySkills } from '@/pages/MySkills'
 
 function App() {
   return (
@@ -38,6 +40,8 @@ function App() {
         <Route path="assessment" element={<AdaptiveAssessment />} />
         <Route path="forecast" element={<SkillsForecast />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="github-import" element={<GitHubImport />} />
+        <Route path="my-skills" element={<MySkills />} />
       </Route>
       <Route path="auth/callback" element={<AuthCallback />} />
     </Routes>
