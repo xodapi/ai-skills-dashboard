@@ -1,6 +1,6 @@
 # AI Skills Dashboard - Текущий статус проекта
 
-**Последнее обновление:** 2026-08-16
+**Последнее обновление:** 2026-08-16 (v2.3)
 
 **Сайт:** https://ai-skills.syntog.ru (production, HTTPS, работает)
 
@@ -17,18 +17,33 @@
 - ✅ Аналитика: co-occurrence навыков, зарплатные распределения, география
 - ✅ Docker Compose production конфигурация
 - ✅ Автоматический деплой через GitHub Actions
+- ✅ **Phase 2 demo mode**: `/users/me/skills` GET/POST/PATCH/DELETE, bulk import, stats — in-memory, без DB
+- ✅ **Security**: PyJWT 2.10.1, react-router-dom 7.18.2, vite 6.3.5 (CVE-2024-33663/33664 закрыты)
 
 ### Frontend (React 19 + TanStack Router + Query)
-- ✅ **Dashboard** - обзор рынка, топ навыков, зарплатная статистика
-- ✅ **SkillsMap** - интерактивный force-directed граф навыков
-- ✅ **SkillSets** - архетипы ролей, уровни сложности, пары навыков
-- ✅ **VacanciesMap** - каталог вакансий с фильтрацией и поиском
-- ✅ **WorldMap** - география (страны/города), форматы работы
-- ✅ **Trends** - динамика популярности навыков
-- ✅ **Analytics** - глубокая аналитика навыков
-- ✅ **Radar** - персональный технологический радар (Thoughtworks-style)
-- ✅ **GapAnalyzer** - анализ разрыва в навыках с рекомендациями
-- ✅ **Trainer** - 15 тренажёров с теорией, упражнениями, Web Speech API
+- ✅ **Dashboard** — обзор рынка + SalaryHintWidget + ForecastSnapshotWidget + **MySkillsSnapshotWidget** (новый)
+- ✅ **SkillsMap** — интерактивный force-directed граф навыков
+- ✅ **SkillSets** — архетипы ролей, уровни сложности, пары навыков
+- ✅ **VacanciesMap** — каталог вакансий с фильтрацией и поиском
+- ✅ **WorldMap** — география (страны/города), форматы работы
+- ✅ **Trends** — динамика популярности навыков
+- ✅ **Analytics** — глубокая аналитика навыков
+- ✅ **Radar** — персональный технологический радар (Thoughtworks-style)
+- ✅ **GapAnalyzer** — анализ разрыва в навыках с рекомендациями
+- ✅ **Trainer** — 15 тренажёров с теорией, упражнениями, Web Speech API
+- ✅ **SalaryCalculator** — расчёт зарплаты по навыкам и опыту
+- ✅ **RoleRoadmap** — 8 карьерных путей с шагами обучения
+- ✅ **AdaptiveAssessment** — адаптивный тест Skill IQ
+- ✅ **SkillsForecast** — прогноз спроса на 1/3/6/12 месяцев
+- ✅ **Profile** — публичный профиль пользователя (Phase 1)
+- ✅ **AuthCallback** — GitHub OAuth callback handler
+- ✅ **GitHubImport** — импорт навыков из публичных репозиториев
+- ✅ **MySkills** — управление навыками: добавить / изменить уровень / удалить
+
+### Навигация
+- ✅ Header с 3 групповыми дропдаунами (Аналитика, Карьера, Профиль)
+- ✅ Breadcrumb-пилюля активной страницы
+- ✅ Glassmorphism стиль; закрытие по клику вне дропдауна
 
 ### Система тем (4 темы)
 - ✅ **Dark** - текущая тема, cyan accent
@@ -125,9 +140,9 @@ GET    /api/v1/users/{username}/skills    - Публичные навыки
 
 ## 📊 Статистика
 
-- **Коммитов:** 50+
-- **Backend эндпоинтов:** 25+
-- **Frontend страниц:** 10
+- **Коммитов:** 55+
+- **Backend эндпоинтов:** 40+ (включая demo Phase 2 user skill management)
+- **Frontend страниц:** 18
 - **Тренажёров:** 15 модулей
 - **Упражнений:** 45+ практических заданий
 - **Навыков в базе:** 52

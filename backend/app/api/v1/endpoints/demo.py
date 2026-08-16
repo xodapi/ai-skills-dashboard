@@ -2,8 +2,8 @@
 API endpoints with demo data.
 IMPORTANT: specific sub-paths must be declared BEFORE parameterized routes.
 """
-from typing import Optional
-from fastapi import APIRouter, Query
+from typing import Optional, List
+from fastapi import APIRouter, Query, Request
 from datetime import datetime
 
 from app.demo_data import (
@@ -423,13 +423,19 @@ async def get_skills_forecast(
 
     skill_data.sort(key=lambda x: x["forecast_growth_pct"], reverse=True)
 
+    items = skill_data[:top_n]
+    # Rename fields to match frontend SkillsForecast interface
+    for item in items:
+        item["vacancy_count"]       = item.pop("current_vacancies")
+        item["momentum"]            = item.pop("momentum_30d") / 100.0
+
     return {
         "horizon": horizon,
         "generated_at": datetime.utcnow().isoformat(),
-        "skills": skill_data[:top_n],
-        "rising_count": sum(1 for s in skill_data[:top_n] if s["trend"] == "rising"),
-        "falling_count": sum(1 for s in skill_data[:top_n] if s["trend"] == "falling"),
-        "stable_count": sum(1 for s in skill_data[:top_n] if s["trend"] == "stable"),
+        "items": items,
+        "rising_count":  sum(1 for s in items if s["trend"] == "rising"),
+        "falling_count": sum(1 for s in items if s["trend"] == "falling"),
+        "stable_count":  sum(1 for s in items if s["trend"] == "stable"),
     }
 
 
@@ -508,25 +514,43 @@ async def import_github_skills(
                 from fastapi import HTTPException
                 raise HTTPException(status_code=502, detail="GitHub API unavailable")
 
+        # Fetch user profile
+            user_resp = await client.get(
+                f"https://api.github.com/users/{username}",
+                headers={"Accept": "application/vnd.github.v3+json"},
+            )
+            user_info = user_resp.json() if user_resp.status_code == 200 else {}
+
             repos = resp.json()
 
-        inferred: dict = {}  # skill → {count, sources}
+        inferred: dict = {}  # skill → {count, sources, source_type}
 
-        def add_skill(skill: str, source: str) -> None:
+        def add_skill(skill: str, source: str, source_type: str) -> None:
             if skill not in inferred:
-                inferred[skill] = {"count": 0, "sources": set()}
+                inferred[skill] = {"count": 0, "sources": set(), "source_type": source_type}
             inferred[skill]["count"] += 1
             inferred[skill]["sources"].add(source)
 
+        lang_counts: dict = {}
+        total_bytes = 0
         for repo in repos:
             if repo.get("fork"):
                 continue
             lang = repo.get("language") or ""
+            if lang:
+                lang_counts[lang] = lang_counts.get(lang, 0) + 1
+                total_bytes += 1
             for s in LANG_TO_SKILLS.get(lang, []):
-                add_skill(s, f"language:{lang}")
+                add_skill(s, f"language:{lang}", "language")
             for topic in repo.get("topics", []):
                 for s in TOPIC_TO_SKILLS.get(topic, []):
-                    add_skill(s, f"topic:{topic}")
+                    add_skill(s, f"topic:{topic}", "topic")
+
+        # Language percentage breakdown
+        raw_languages = {
+            lang: round(count / max(total_bytes, 1) * 100, 1)
+            for lang, count in sorted(lang_counts.items(), key=lambda x: -x[1])
+        }
 
         # Cross-reference with known skills in our DB
         known = {s["skill"] for s in DEMO_STATS}
@@ -535,18 +559,26 @@ async def import_github_skills(
                 "skill": skill,
                 "confidence": min(data["count"] / 3, 1.0),
                 "evidence_count": data["count"],
-                "sources": sorted(data["sources"]),
+                "source": data["source_type"],
+                "evidence": ", ".join(sorted(data["sources"])[:3]),
                 "in_market": skill in known,
             }
             for skill, data in inferred.items()
         ]
-        matched.sort(key=lambda x: (-x["evidence_count"], x["skill"]))
+        matched.sort(key=lambda x: (-x["confidence"], -x["evidence_count"]))
 
+        non_fork_repos = [r for r in repos if not r.get("fork")]
         return {
-            "username": username,
-            "repos_analyzed": len([r for r in repos if not r.get("fork")]),
+            "username": user_info.get("login", username),
+            "name": user_info.get("name"),
+            "avatar_url": user_info.get("avatar_url"),
+            "bio": user_info.get("bio"),
+            "public_repos": user_info.get("public_repos", len(non_fork_repos)),
+            "repos_analyzed": len(non_fork_repos),
             "skills_found": len(matched),
             "skills": matched,
+            "raw_languages": raw_languages,
+            "raw_topics": sorted({t for r in non_fork_repos for t in r.get("topics", [])}),
         }
 
     except Exception as e:
@@ -554,3 +586,121 @@ async def import_github_skills(
         if "404" in str(e) or "not found" in str(e).lower():
             raise HTTPException(status_code=404, detail=f"GitHub user '{username}' not found")
         raise HTTPException(status_code=502, detail=f"Failed to fetch GitHub data: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# User skills management (demo mode — no DB, uses session-like in-memory store)
+# In production these are handled by /users/me/skills in users.py
+# ---------------------------------------------------------------------------
+
+_demo_skills: dict = {}  # key: f"{token_hash}:{skill}" → {skill, level, source, updated_at}
+
+
+def _token_key(request_headers: dict) -> str:
+    auth = request_headers.get("authorization", "anonymous")
+    return str(hash(auth))[:12]
+
+
+@router.get("/users/me/skills")
+async def demo_get_skills(request: Request) -> List[dict]:
+    """Demo: get user skills (stored in process memory)."""
+    key = _token_key(dict(request.headers))
+    now = datetime.utcnow().isoformat()
+    return [
+        {"skill": v["skill"], "level": v["level"], "source": v["source"], "updated_at": v["updated_at"]}
+        for k, v in _demo_skills.items()
+        if k.startswith(key + ":")
+    ]
+
+
+@router.post("/users/me/skills")
+async def demo_add_skill(body: dict, request: Request) -> dict:
+    """Demo: add a skill."""
+    key = _token_key(dict(request.headers))
+    skill = body.get("skill", "")
+    level = int(body.get("level", 50))
+    source = body.get("source", "manual")
+    if not skill:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="skill is required")
+    store_key = f"{key}:{skill}"
+    if store_key in _demo_skills:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Skill already added")
+    _demo_skills[store_key] = {"skill": skill, "level": level, "source": source, "updated_at": datetime.utcnow().isoformat()}
+    return {"skill": skill, "level": level, "source": source}
+
+
+@router.patch("/users/me/skills/{skill_name}")
+async def demo_update_skill(skill_name: str, body: dict, request: Request) -> dict:
+    """Demo: update skill level."""
+    key = _token_key(dict(request.headers))
+    store_key = f"{key}:{skill_name}"
+    if store_key not in _demo_skills:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Skill not found")
+    _demo_skills[store_key]["level"] = int(body.get("level", _demo_skills[store_key]["level"]))
+    _demo_skills[store_key]["updated_at"] = datetime.utcnow().isoformat()
+    return _demo_skills[store_key]
+
+
+@router.delete("/users/me/skills/{skill_name}")
+async def demo_delete_skill(skill_name: str, request: Request) -> dict:
+    """Demo: delete a skill."""
+    key = _token_key(dict(request.headers))
+    store_key = f"{key}:{skill_name}"
+    if store_key not in _demo_skills:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Skill not found")
+    del _demo_skills[store_key]
+    return {"deleted": skill_name}
+
+
+@router.post("/users/me/skills/bulk")
+async def demo_bulk_add_skills(body: dict, request: Request) -> dict:
+    """Demo: bulk add skills (used by GitHub Import)."""
+    key = _token_key(dict(request.headers))
+    skills_input: list = body.get("skills", [])
+    added = []
+    for entry in skills_input:
+        skill = entry.get("skill", "")
+        if not skill:
+            continue
+        store_key = f"{key}:{skill}"
+        if store_key not in _demo_skills:
+            _demo_skills[store_key] = {
+                "skill": skill,
+                "level": int(entry.get("level", 50)),
+                "source": entry.get("source", "github"),
+                "updated_at": datetime.utcnow().isoformat(),
+            }
+            added.append(skill)
+    return {"saved": len(added), "skills": added}
+
+
+@router.get("/users/me/stats")
+async def demo_user_stats(request: Request) -> dict:
+    """Demo: user stats."""
+    key = _token_key(dict(request.headers))
+    my_skills = [v for k, v in _demo_skills.items() if k.startswith(key + ":")]
+    return {
+        "total_skills": len(my_skills),
+        "avg_skill_level": round(sum(s["level"] for s in my_skills) / max(len(my_skills), 1)),
+        "completed_modules": 0,
+        "total_exercises_done": 0,
+        "bookmarks_count": 0,
+        "days_active": 1,
+    }
+
+
+@router.get("/users/me/progress")
+async def demo_user_progress() -> list:
+    """Demo: empty training progress."""
+    return []
+
+
+@router.get("/users/me/bookmarks")
+async def demo_user_bookmarks() -> list:
+    """Demo: empty bookmarks."""
+    return []
+

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   AreaChart, Area, CartesianGrid,
@@ -74,6 +75,96 @@ function SalaryHintWidget() {
         </>
       ) : (
         <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Нет данных</p>
+      )}
+    </div>
+  )
+}
+
+// ── My skills snapshot widget ────────────────────────────────────────────────
+function MySkillsSnapshotWidget() {
+  const { token, isAuthenticated } = useAuth()
+
+  const { data: stats } = useQuery({
+    queryKey: ['my-stats-dash', token],
+    queryFn: () =>
+      fetch(`${API}/users/me/stats`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    enabled: !!token,
+    staleTime: 2 * 60_000,
+  })
+
+  const { data: mySkills } = useQuery<{ skill: string; level: number }[]>({
+    queryKey: ['user-skills-dash', token],
+    queryFn: () =>
+      fetch(`${API}/users/me/skills`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    enabled: !!token,
+    staleTime: 2 * 60_000,
+  })
+
+  const LEVEL_COLOR = (l: number) =>
+    l >= 90 ? '#F59E0B' : l >= 75 ? '#10B981' : l >= 50 ? '#22D3EE' : l >= 25 ? '#818CF8' : '#94A3B8'
+
+  if (!isAuthenticated) {
+    return (
+      <div className="glass" style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+          🗂 Мои навыки
+        </p>
+        <p style={{ fontSize: 28, lineHeight: 1 }}>🔐</p>
+        <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+          Войдите, чтобы видеть свои навыки прямо здесь
+        </p>
+        <Link to="/github-import" style={{
+          marginTop: 4, padding: '8px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
+          background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+          textDecoration: 'none', alignSelf: 'flex-start',
+        }}>
+          ⬡ Импорт с GitHub →
+        </Link>
+      </div>
+    )
+  }
+
+  const recent = (mySkills ?? []).slice(-4).reverse()
+
+  return (
+    <div className="glass" style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+          🗂 Мои навыки
+        </p>
+        <Link to="/my-skills" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none' }}>Управлять →</Link>
+      </div>
+
+      {stats && (
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
+            <p style={{ fontSize: 22, fontWeight: 900, color: 'var(--cyan)', lineHeight: 1 }}>{stats.total_skills ?? 0}</p>
+            <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>навыков</p>
+          </div>
+          <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
+            <p style={{ fontSize: 22, fontWeight: 900, color: '#10B981', lineHeight: 1 }}>{stats.avg_skill_level ?? 0}</p>
+            <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>средний ур.</p>
+          </div>
+        </div>
+      )}
+
+      {recent.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {recent.map((s) => (
+            <div key={s.skill} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1, height: 4, background: 'var(--surface-4)', borderRadius: 99 }}>
+                <div style={{ height: '100%', borderRadius: 99, width: `${s.level}%`, background: LEVEL_COLOR(s.level), transition: 'width .4s' }} />
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--text-2)', minWidth: 80, fontWeight: 500 }}>{s.skill}</span>
+              <span style={{ fontSize: 10, color: LEVEL_COLOR(s.level), fontWeight: 700, minWidth: 22, textAlign: 'right' }}>{s.level}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+          Навыков пока нет —{' '}
+          <Link to="/github-import" style={{ color: 'var(--accent)', textDecoration: 'none' }}>импортируй с GitHub</Link>
+        </p>
       )}
     </div>
   )
@@ -264,9 +355,10 @@ export function Dashboard() {
       </section>
 
       {/* New feature widgets row */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 20 }}>
         <SalaryHintWidget />
         <ForecastSnapshotWidget />
+        <MySkillsSnapshotWidget />
       </section>
 
       {/* Feature CTA row */}
