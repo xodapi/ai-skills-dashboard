@@ -219,16 +219,17 @@ export function Radar() {
                 {/* Quadrant labels */}
                 {QUADRANTS.map((label, i) => {
                   const angle = (i * Math.PI) / 2 + Math.PI / 4
-                  const x = Math.cos(angle) * (size / 2 - 50)
-                  const y = Math.sin(angle) * (size / 2 - 50)
+                  const x = Math.cos(angle) * (size / 2 - 60)
+                  const y = Math.sin(angle) * (size / 2 - 60)
                   return (
                     <text key={i}
                       x={x} y={y}
                       textAnchor="middle"
-                      fill="var(--text-2)"
-                      fontSize={13}
+                      dominantBaseline="middle"
+                      fill="var(--text-1)"
+                      fontSize={14}
                       fontWeight={700}
-                      style={{ textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                      style={{ textTransform: 'uppercase', letterSpacing: '.08em' }}>
                       {label}
                     </text>
                   )
@@ -242,13 +243,13 @@ export function Radar() {
             
             {/* Legend */}
             <div className="glass" style={{ padding: 20 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginBottom: 14 }}>Кольца (спрос)</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginBottom: 14 }}>Глоссарий: кольца радара</p>
               {RINGS.map(ring => (
                 <div key={ring.name} style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{ width: 14, height: 14, borderRadius: '50%', background: ring.color, flexShrink: 0, marginTop: 2 }} />
                   <div>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: ring.color, marginBottom: 2 }}>{ring.name}</p>
-                    <p style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.4 }}>{ring.desc}</p>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: ring.color, marginBottom: 3 }}>{ring.name}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.5 }}>{ring.desc}</p>
                   </div>
                 </div>
               ))}

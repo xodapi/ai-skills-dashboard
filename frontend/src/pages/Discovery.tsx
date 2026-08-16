@@ -110,7 +110,9 @@ export function Discovery() {
   // All skills missing from mySkills (across all archetypes)
   const missingSkills = useMemo(() => {
     const allNeeded = new Set(archetypes.flatMap(a => a.top_skills))
-    return skills.filter(s => allNeeded.has(s.skill_name) && !mySkills.includes(s.skill_name))
+    const missing = skills.filter(s => allNeeded.has(s.skill_name) && !mySkills.includes(s.skill_name))
+    // If user hasn't selected any skills yet, return empty array to show welcome screen
+    return mySkills.length === 0 ? [] : missing
   }, [skills, archetypes, mySkills])
 
   const displaySkills = useMemo(() => {
@@ -230,7 +232,25 @@ export function Discovery() {
       </div>
 
       {/* Skill cards */}
-      {displaySkills.length === 0 ? (
+      {missingSkills.length === 0 && mySkills.length === 0 ? (
+        <div className="glass" style={{ padding: 60, textAlign: 'center' }}>
+          <p style={{ fontSize: 48, marginBottom: 16 }}>👋</p>
+          <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>
+            Добро пожаловать в Discovery!
+          </p>
+          <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 20, maxWidth: 480, margin: '0 auto 20px' }}>
+            Сначала выберите свои навыки в Gap Analyzer, чтобы увидеть, какие навыки стоит изучить дальше.
+          </p>
+          <Link to="/gap-analyzer" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '10px 24px', borderRadius: 99, fontSize: 14, fontWeight: 600,
+            background: 'var(--accent)', color: '#fff', textDecoration: 'none',
+            border: '1px solid var(--accent)',
+          }}>
+            ⊕ Открыть Gap Analyzer
+          </Link>
+        </div>
+      ) : displaySkills.length === 0 ? (
         <div className="glass" style={{ padding: 60, textAlign: 'center' }}>
           <p style={{ fontSize: 40, marginBottom: 12 }}>🎉</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>
