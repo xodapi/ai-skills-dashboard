@@ -7,6 +7,9 @@ import { VacanciesMap } from '@/pages/VacanciesMap'
 import { WorldMap } from '@/pages/WorldMap'
 import { Trends } from '@/pages/Trends'
 import { Analytics } from '@/pages/Analytics'
+import { Radar } from '@/pages/Radar'
+import { GapAnalyzer } from '@/pages/GapAnalyzer'
+import { Trainer } from '@/pages/Trainer'
 
 function App() {
   return (
@@ -19,6 +22,9 @@ function App() {
         <Route path="worldmap" element={<WorldMap />} />
         <Route path="trends" element={<Trends />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="radar" element={<Radar />} />
+        <Route path="gap-analyzer" element={<GapAnalyzer />} />
+        <Route path="trainer/:skill" element={<Trainer />} />
       </Route>
     </Routes>
   )

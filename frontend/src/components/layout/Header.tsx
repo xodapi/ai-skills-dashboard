@@ -8,6 +8,8 @@ const NAV = [
   { name: 'География', href: '/worldmap', icon: '◐' },
   { name: 'Тренды', href: '/trends', icon: '∿' },
   { name: 'Аналитика', href: '/analytics', icon: '⊞' },
+  { name: 'Радар', href: '/radar', icon: '◎' },
+  { name: 'Пробелы', href: '/gap-analyzer', icon: '⊕' },
 ]
 
 export function Header() {
