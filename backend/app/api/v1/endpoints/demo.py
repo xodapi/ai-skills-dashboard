@@ -161,7 +161,7 @@ async def get_skills(
 @router.get("/trends")
 async def get_trends(
     skill: str = Query(..., description="Skill name"),
-    period: str = Query("30d", regex="^(7d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(7d|30d|90d)$"),
 ):
     days_map = {"7d": 7, "30d": 30, "90d": 90}
     return {
@@ -250,3 +250,307 @@ async def get_training_module(skill: str):
         raise HTTPException(status_code=404, detail=f"Module '{skill}' not found")
     
     return TRAINING_MODULES[skill]
+
+
+# ---------------------------------------------------------------------------
+# Salary Calculator
+# ---------------------------------------------------------------------------
+
+@router.get("/salary/calculate")
+async def calculate_salary(
+    skills: str = Query(..., description="Comma-separated list of skills"),
+    experience_years: int = Query(2, ge=0, le=30),
+    employment_type: Optional[str] = Query(None),
+):
+    """
+    Predict salary range for a given skill set.
+    Returns base prediction + per-skill salary impact (Levels.fyi style).
+    """
+    skill_list = [s.strip() for s in skills.split(",") if s.strip()]
+
+    # Build skill→salary lookup from demo data
+    skill_salary_map: dict = {}
+    skill_vacancy_counts: dict = {}
+    for v in DEMO_VACANCIES:
+        mid = (v["salary_min"] + v["salary_max"]) / 2 if v["salary_min"] else 0
+        for s in v["skills"]:
+            if s not in skill_salary_map:
+                skill_salary_map[s] = []
+                skill_vacancy_counts[s] = 0
+            if mid:
+                skill_salary_map[s].append(mid)
+            skill_vacancy_counts[s] += 1
+
+    # Base salary from matching vacancies
+    matching = [
+        v for v in DEMO_VACANCIES
+        if any(s in v["skills"] for s in skill_list)
+    ]
+    # Stricter: vacancies that have ≥ half the requested skills
+    strong_match = [
+        v for v in DEMO_VACANCIES
+        if sum(1 for s in skill_list if s in v["skills"]) >= max(1, len(skill_list) // 2)
+    ]
+    use = strong_match if strong_match else matching
+
+    if not use:
+        # No match — return market median
+        all_salaries = [(v["salary_min"] + v["salary_max"]) / 2 for v in DEMO_VACANCIES if v["salary_min"]]
+        base = int(sum(all_salaries) / len(all_salaries))
+    else:
+        salaries = [(v["salary_min"] + v["salary_max"]) / 2 for v in use if v["salary_min"]]
+        base = int(sum(salaries) / len(salaries)) if salaries else 200_000
+
+    # Experience multiplier
+    exp_mult = 1.0 + min(experience_years * 0.06, 0.60)
+    base = int(base * exp_mult)
+
+    # Employment type adjustment
+    type_adj = {"remote": 1.10, "hybrid": 1.05, "full-time": 1.0}
+    adj = type_adj.get(employment_type or "full-time", 1.0)
+    base = int(base * adj)
+
+    # Per-skill impact: how much adding this skill increases salary
+    skill_impacts = []
+    for stat in DEMO_STATS:
+        sname = stat["skill"]
+        if sname in skill_list:
+            continue  # already have it
+        # Estimate: avg salary of vacancies WITH this skill vs current base
+        avgs = skill_salary_map.get(sname, [])
+        if avgs:
+            skill_avg = sum(avgs) / len(avgs)
+            delta = int(skill_avg - base / exp_mult)  # raw delta before exp mult
+            if delta > 0:
+                pct = round(delta / (base / exp_mult) * 100, 1)
+                skill_impacts.append({
+                    "skill": sname,
+                    "salary_delta": int(delta * exp_mult),
+                    "pct_increase": pct,
+                    "vacancy_count": skill_vacancy_counts.get(sname, 0),
+                })
+
+    skill_impacts.sort(key=lambda x: x["salary_delta"], reverse=True)
+
+    # Find matching archetypes
+    matched_archetypes = []
+    for arch in DEMO_ARCHETYPES:
+        overlap = sum(1 for s in skill_list if s in arch["top_skills"])
+        if overlap >= 2:
+            matched_archetypes.append({
+                "archetype_id": arch["archetype_id"],
+                "archetype_label": arch["archetype_label"],
+                "skill_overlap": overlap,
+                "max_overlap": len(arch["top_skills"]),
+                "match_pct": round(overlap / len(arch["top_skills"]) * 100),
+                "avg_salary": arch["avg_salary"],
+            })
+    matched_archetypes.sort(key=lambda x: x["skill_overlap"], reverse=True)
+
+    # Confidence: based on number of matching vacancies
+    confidence = min(len(use) / 10, 1.0)  # 10+ matches = 100% confidence
+
+    return {
+        "input": {
+            "skills": skill_list,
+            "experience_years": experience_years,
+            "employment_type": employment_type or "full-time",
+        },
+        "salary": {
+            "min": int(base * 0.85),
+            "median": base,
+            "max": int(base * 1.25),
+            "currency": "RUR",
+        },
+        "confidence": round(confidence, 2),
+        "matching_vacancies": len(use),
+        "skill_impacts": skill_impacts[:10],
+        "matched_archetypes": matched_archetypes[:3],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Skills Forecast
+# ---------------------------------------------------------------------------
+
+@router.get("/skills/forecast")
+async def get_skills_forecast(
+    horizon: str = Query("3m", pattern="^(1m|3m|6m|12m)$"),
+    top_n: int = Query(15, ge=5, le=30),
+):
+    """
+    Forecast skill demand growth for the next N months.
+    Uses a simple momentum model on demo trend data.
+    """
+    import math
+
+    # Growth model: skills with rising momentum in recent data
+    # Using vacancy count + salary premium as proxy for demand
+    skill_data = []
+    for stat in DEMO_STATS[:top_n + 10]:
+        sname = stat["skill"]
+        trend_days = generate_trend_data(sname, 30)
+
+        # Calculate momentum: compare last 7 days vs previous 7 days
+        recent = trend_days[-7:]
+        prev = trend_days[-14:-7]
+        recent_avg = sum(p["vacancy_count"] for p in recent) / 7
+        prev_avg = sum(p["vacancy_count"] for p in prev) / 7
+        momentum = (recent_avg - prev_avg) / max(prev_avg, 1)
+
+        # Salary premium vs market median
+        all_sals = [s["avg_salary"] for s in DEMO_STATS if s["avg_salary"] > 0]
+        market_median = sorted(all_sals)[len(all_sals) // 2] if all_sals else 200_000
+        salary_premium = (stat["avg_salary"] - market_median) / market_median if market_median else 0
+
+        # Forecast growth rate
+        horizon_months = {"1m": 1, "3m": 3, "6m": 6, "12m": 12}[horizon]
+        base_growth = momentum * 0.7 + salary_premium * 0.3
+        # Dampen extreme values
+        forecast_growth = math.tanh(base_growth * 3) * 0.4  # max ±40%
+
+        skill_data.append({
+            "skill": sname,
+            "current_demand": stat["percentage"],
+            "current_vacancies": stat["vacancy_count"],
+            "avg_salary": stat["avg_salary"],
+            "momentum_30d": round(momentum * 100, 1),
+            "salary_premium_pct": round(salary_premium * 100, 1),
+            "forecast_growth_pct": round(forecast_growth * 100, 1),
+            "forecast_vacancies": max(0, int(stat["vacancy_count"] * (1 + forecast_growth))),
+            "trend": "rising" if forecast_growth > 0.05 else "falling" if forecast_growth < -0.05 else "stable",
+        })
+
+    skill_data.sort(key=lambda x: x["forecast_growth_pct"], reverse=True)
+
+    return {
+        "horizon": horizon,
+        "generated_at": datetime.utcnow().isoformat(),
+        "skills": skill_data[:top_n],
+        "rising_count": sum(1 for s in skill_data[:top_n] if s["trend"] == "rising"),
+        "falling_count": sum(1 for s in skill_data[:top_n] if s["trend"] == "falling"),
+        "stable_count": sum(1 for s in skill_data[:top_n] if s["trend"] == "stable"),
+    }
+
+
+# ---------------------------------------------------------------------------
+# GitHub skills import
+# ---------------------------------------------------------------------------
+
+@router.get("/github/skills")
+async def import_github_skills(
+    username: str = Query(..., description="GitHub username"),
+):
+    """
+    Infer skills from a GitHub user's public repositories.
+    Maps repo languages and topics to ML/AI skill names.
+    """
+    import httpx
+
+    LANG_TO_SKILLS: dict = {
+        "Python":     ["Python"],
+        "Jupyter Notebook": ["Python", "Pandas", "NumPy", "Jupyter"],
+        "C++":        ["C++", "CUDA"],
+        "TypeScript": ["TypeScript", "FastAPI"],
+        "JavaScript": ["JavaScript"],
+        "Dockerfile": ["Docker"],
+        "Shell":      ["Linux", "CI/CD"],
+        "HCL":        ["Terraform"],
+        "YAML":       ["Kubernetes", "CI/CD"],
+    }
+    TOPIC_TO_SKILLS: dict = {
+        "pytorch":       ["PyTorch", "Deep Learning"],
+        "tensorflow":    ["TensorFlow", "Deep Learning"],
+        "machine-learning": ["Machine Learning", "scikit-learn"],
+        "deep-learning": ["Deep Learning"],
+        "nlp":           ["NLP", "Transformers"],
+        "llm":           ["LLM", "Transformers", "LangChain"],
+        "langchain":     ["LangChain", "RAG"],
+        "computer-vision": ["Computer Vision", "OpenCV"],
+        "opencv":        ["OpenCV", "Computer Vision"],
+        "kubernetes":    ["Kubernetes", "Docker"],
+        "docker":        ["Docker"],
+        "fastapi":       ["FastAPI", "Python"],
+        "mlops":         ["MLOps", "Docker", "Kubernetes"],
+        "airflow":       ["Airflow"],
+        "spark":         ["Spark"],
+        "sql":           ["SQL"],
+        "postgres":      ["PostgreSQL", "SQL"],
+        "transformers":  ["Transformers", "HuggingFace"],
+        "huggingface":   ["Transformers", "HuggingFace"],
+        "rag":           ["RAG", "LangChain"],
+        "openai":        ["OpenAI API", "LLM"],
+        "stable-diffusion": ["Computer Vision", "PyTorch"],
+        "data-science":  ["Python", "Pandas", "Machine Learning"],
+        "scikit-learn":  ["scikit-learn", "Machine Learning"],
+        "pandas":        ["Pandas"],
+        "numpy":         ["NumPy"],
+        "matplotlib":    ["Matplotlib"],
+        "mlflow":        ["MLflow"],
+        "terraform":     ["Terraform"],
+        "aws":           ["AWS"],
+        "gcp":           ["GCP"],
+        "redis":         ["Redis"],
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            # Fetch public repos
+            resp = await client.get(
+                f"https://api.github.com/users/{username}/repos",
+                params={"per_page": 30, "sort": "updated"},
+                headers={"Accept": "application/vnd.github.v3+json"},
+            )
+            if resp.status_code == 404:
+                from fastapi import HTTPException
+                raise HTTPException(status_code=404, detail=f"GitHub user '{username}' not found")
+            if resp.status_code != 200:
+                from fastapi import HTTPException
+                raise HTTPException(status_code=502, detail="GitHub API unavailable")
+
+            repos = resp.json()
+
+        inferred: dict = {}  # skill → {count, sources}
+
+        def add_skill(skill: str, source: str) -> None:
+            if skill not in inferred:
+                inferred[skill] = {"count": 0, "sources": set()}
+            inferred[skill]["count"] += 1
+            inferred[skill]["sources"].add(source)
+
+        for repo in repos:
+            if repo.get("fork"):
+                continue
+            lang = repo.get("language") or ""
+            for s in LANG_TO_SKILLS.get(lang, []):
+                add_skill(s, f"language:{lang}")
+            for topic in repo.get("topics", []):
+                for s in TOPIC_TO_SKILLS.get(topic, []):
+                    add_skill(s, f"topic:{topic}")
+
+        # Cross-reference with known skills in our DB
+        known = {s["skill"] for s in DEMO_STATS}
+        matched = [
+            {
+                "skill": skill,
+                "confidence": min(data["count"] / 3, 1.0),
+                "evidence_count": data["count"],
+                "sources": sorted(data["sources"]),
+                "in_market": skill in known,
+            }
+            for skill, data in inferred.items()
+        ]
+        matched.sort(key=lambda x: (-x["evidence_count"], x["skill"]))
+
+        return {
+            "username": username,
+            "repos_analyzed": len([r for r in repos if not r.get("fork")]),
+            "skills_found": len(matched),
+            "skills": matched,
+        }
+
+    except Exception as e:
+        from fastapi import HTTPException
+        if "404" in str(e) or "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=f"GitHub user '{username}' not found")
+        raise HTTPException(status_code=502, detail=f"Failed to fetch GitHub data: {str(e)}")

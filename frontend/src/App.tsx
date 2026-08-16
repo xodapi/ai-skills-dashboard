@@ -11,6 +11,10 @@ import { Radar } from '@/pages/Radar'
 import { GapAnalyzer } from '@/pages/GapAnalyzer'
 import Trainer from '@/pages/Trainer'
 import { Discovery } from '@/pages/Discovery'
+import { SalaryCalculator } from '@/pages/SalaryCalculator'
+import { RoleRoadmap } from '@/pages/RoleRoadmap'
+import { AdaptiveAssessment } from '@/pages/AdaptiveAssessment'
+import { SkillsForecast } from '@/pages/SkillsForecast'
 
 function App() {
   return (
@@ -27,6 +31,10 @@ function App() {
         <Route path="gap-analyzer" element={<GapAnalyzer />} />
         <Route path="discovery" element={<Discovery />} />
         <Route path="trainer/:skill" element={<Trainer />} />
+        <Route path="salary-calculator" element={<SalaryCalculator />} />
+        <Route path="roadmap" element={<RoleRoadmap />} />
+        <Route path="assessment" element={<AdaptiveAssessment />} />
+        <Route path="forecast" element={<SkillsForecast />} />
       </Route>
     </Routes>
   )
