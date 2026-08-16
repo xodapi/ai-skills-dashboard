@@ -219,3 +219,33 @@ async def get_summary_stats():
         "top_skills": [s["skill"] for s in DEMO_STATS[:3]],
         "last_updated": datetime.utcnow().isoformat(),
     }
+
+
+@router.get("/training/modules")
+async def get_training_modules():
+    """Get all available training modules."""
+    from app.training_exercises import TRAINING_MODULES
+    
+    return {
+        "modules": [
+            {
+                "id": module_id,
+                "title": module_data["title"],
+                "icon": module_data["icon"],
+                "level": module_data["level"],
+                "exercise_count": len(module_data["exercises"])
+            }
+            for module_id, module_data in TRAINING_MODULES.items()
+        ]
+    }
+
+
+@router.get("/training/modules/{skill}")
+async def get_training_module(skill: str):
+    """Get full training module for a specific skill."""
+    from app.training_exercises import TRAINING_MODULES
+    
+    if skill not in TRAINING_MODULES:
+        return {"error": "Module not found"}, 404
+    
+    return TRAINING_MODULES[skill]

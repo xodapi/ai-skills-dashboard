@@ -1,180 +1,109 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
+
+interface Exercise {
+  type: 'code' | 'quiz' | 'terminal'
+  title?: string
+  description?: string
+  question?: string
+  starter_code?: string
+  solution?: string
+  options?: string[]
+  correct?: number
+  explanation?: string
+  command?: string
+  expected_output?: string
+  test_cases?: Array<{ input: string; expected: string }>
+}
 
 interface TrainingModule {
   title: string
+  icon: string
+  level: string
   theory: string
-  audio_script: string
-  exercises: Array<{
-    type: 'code' | 'quiz' | 'terminal'
-    question: string
-    starter_code?: string
-    solution?: string
-    options?: string[]
-    correct_answer?: string | number
-  }>
+  exercises: Exercise[]
 }
 
-// Simple markdown parser (bold, lists, code)
+// Simple markdown parser
 function parseMarkdown(text: string): string {
   return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #22D3EE; font-weight: 700;">$1</strong>')
-    .replace(/`([^`]+)`/g, '<code style="background: rgba(34,211,238,.15); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 13px; color: #22D3EE;">$1</code>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: var(--accent); font-weight: 700;">$1</strong>')
+    .replace(/`([^`]+)`/g, '<code style="background: rgba(var(--accent-rgb),.15); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 13px; color: var(--accent);">$1</code>')
     .replace(/^• (.+)$/gm, '<div style="padding-left: 20px; margin: 6px 0;">• $1</div>')
+    .replace(/\n\n/g, '<br><br>')
 }
 
-// Training content database
-const TRAINING_MODULES: Record<string, TrainingModule> = {
-  'Python': {
-    title: 'Python для AI/ML',
-    theory: `Python — основной язык для AI и ML. Ключевые концепции:
-    
-• **List comprehensions** — компактный синтаксис для трансформации данных
-• **Generators** — ленивые вычисления для работы с большими данными
-• **Type hints** — статическая типизация для читаемости кода
-• **Async/await** — асинхронное программирование для I/O операций
-
-В ML используется для data preprocessing, feature engineering, model training через библиотеки NumPy, Pandas, Scikit-learn.`,
-    audio_script: 'Привет! Сегодня изучаем Python для AI и ML. Python стал стандартом в машинном обучении благодаря простому синтаксису и богатой экосистеме. Начнём с list comprehensions — это способ создавать списки в одну строку. Вместо цикла for, вы пишете квадратные скобки с выражением. Например, квадраты чисел от нуля до девяти. Generators работают похоже, но используют круглые скобки и возвращают элементы по запросу, экономя память. Type hints добавляют типы переменных через двоеточие — это помогает IDE подсказывать ошибки. Async await используется для параллельных задач вроде загрузки данных.',
-    exercises: [
-      {
-        type: 'quiz',
-        question: 'Какая библиотека используется для работы с табличными данными в Python?',
-        options: ['NumPy', 'Pandas', 'Matplotlib', 'TensorFlow'],
-        correct_answer: 1,
-      },
-      {
-        type: 'code',
-        question: 'Создайте list comprehension, который возвращает квадраты чётных чисел от 0 до 10',
-        starter_code: '# Напишите list comprehension\nresult = ',
-        solution: 'result = [x**2 for x in range(11) if x % 2 == 0]',
-      },
-      {
-        type: 'terminal',
-        question: 'Установите pandas и проверьте версию',
-        solution: 'pip install pandas && python -c "import pandas; print(pandas.__version__)"',
-      },
-    ],
-  },
-  'PyTorch': {
-    title: 'PyTorch Deep Learning',
-    theory: `PyTorch — фреймворк для глубокого обучения, разработанный группой исследователей (в т.ч. из организаций, признанных в РФ иностранными агентами).
-
-• **Tensors** — многомерные массивы с GPU ускорением
-• **Autograd** — автоматическое дифференцирование для backpropagation
-• **nn.Module** — базовый класс для построения нейросетей
-• **DataLoader** — эффективная загрузка данных батчами
-
-Используется в research, CV, NLP. Более гибкий чем TensorFlow, но требует больше кода.`,
-    audio_script: 'Изучаем PyTorch — фреймворк глубокого обучения. PyTorch стал любимым инструментом исследователей. Главная абстракция — тензоры. Это многомерные массивы как в NumPy, но с поддержкой GPU. Чтобы перенести тензор на видеокарту, вызовите метод cuda или to с параметром cuda. Autograd автоматически считает градиенты. Вы строите граф вычислений, вызываете backward на loss, и PyTorch сам считает производные. nn Module — базовый класс для слоёв и моделей. Наследуйтесь от него, определяйте forward метод, и PyTorch сам создаст backward. DataLoader оборачивает датасет и возвращает батчи — это ускоряет обучение.',
-    exercises: [
-      {
-        type: 'quiz',
-        question: 'Что делает метод .backward() в PyTorch?',
-        options: [
-          'Переносит тензор на CPU',
-          'Вычисляет градиенты через backpropagation',
-          'Инициализирует веса модели',
-          'Сохраняет модель на диск',
-        ],
-        correct_answer: 1,
-      },
-      {
-        type: 'code',
-        question: 'Создайте простой линейный слой с 10 входами и 5 выходами',
-        starter_code: 'import torch.nn as nn\n\n# Создайте nn.Linear\nlayer = ',
-        solution: 'layer = nn.Linear(10, 5)',
-      },
-    ],
-  },
-  'Docker': {
-    title: 'Docker Containerization',
-    theory: `Docker — платформа контейнеризации приложений.
-
-• **Image** — неизменяемый шаблон с ОС и зависимостями
-• **Container** — запущенный экземпляр image
-• **Dockerfile** — текстовый файл с инструкциями сборки
-• **docker-compose** — оркестрация multi-container приложений
-
-В ML используется для воспроизводимости экспериментов и deployment моделей.`,
-    audio_script: 'Изучаем Docker для ML проектов. Docker решает проблему "а у меня работает" — упаковывает приложение со всеми зависимостями в контейнер. Image — это шаблон. Представьте снимок операционной системы с установленным Python и библиотеками. Container — запущенный процесс из этого шаблона. Dockerfile описывает как собрать image. Начинается с FROM — базовый образ, потом RUN для команд, COPY для файлов, CMD для запуска. docker-compose управляет несколькими контейнерами — база данных, API, фронтенд. Один файл yaml и команда up — всё поднимается.',
-    exercises: [
-      {
-        type: 'quiz',
-        question: 'Какая команда создаёт image из Dockerfile?',
-        options: ['docker run', 'docker build', 'docker push', 'docker pull'],
-        correct_answer: 1,
-      },
-      {
-        type: 'terminal',
-        question: 'Запустите контейнер с Python 3.11 и выведите версию',
-        solution: 'docker run python:3.11 python --version',
-      },
-    ],
-  },
-  'Kubernetes': {
-    title: 'Kubernetes Orchestration',
-    theory: `Kubernetes (K8s) — оркестрация контейнеров в production.
-
-• **Pod** — минимальная единица деплоя (1+ контейнеров)
-• **Deployment** — декларативное управление репликами pods
-• **Service** — load balancer и discovery для pods
-• **Ingress** — маршрутизация HTTP/HTTPS трафика
-
-Используется для масштабируемого deployment ML моделей и микросервисов.`,
-    audio_script: 'Изучаем Kubernetes для production ML систем. Kubernetes автоматизирует деплой, масштабирование и управление контейнерами. Pod — базовая единица. Это один или несколько контейнеров, работающих вместе. Deployment описывает желаемое состояние — сколько реплик нужно, какой образ использовать. Kubernetes сам следит чтобы реальность совпадала с декларацией. Service создаёт стабильный endpoint для группы pods — даже если поды перезапускаются, Service остаётся доступным. Ingress управляет внешним трафиком — проксирует запросы к нужным сервисам по URL путям.',
-    exercises: [
-      {
-        type: 'quiz',
-        question: 'Что такое Pod в Kubernetes?',
-        options: [
-          'Группа нод в кластере',
-          'Минимальная единица деплоя — 1+ контейнеров',
-          'Конфигурационный файл',
-          'Сетевой namespace',
-        ],
-        correct_answer: 1,
-      },
-      {
-        type: 'terminal',
-        question: 'Получите список всех pods в namespace default',
-        solution: 'kubectl get pods -n default',
-      },
-    ],
-  },
-}
-
-export function Trainer() {
+export default function Trainer() {
   const { skill } = useParams<{ skill: string }>()
+  const [module, setModule] = useState<TrainingModule | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
   const [activeTab, setActiveTab] = useState<'theory' | 'exercises'>('theory')
   const [currentExercise, setCurrentExercise] = useState(0)
   const [userCode, setUserCode] = useState('')
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
 
-  const decodedSkill = skill ? decodeURIComponent(skill) : ''
-  const module = TRAINING_MODULES[decodedSkill]
-
+  // Fetch module from API
   useEffect(() => {
-    if (module?.exercises[currentExercise]?.starter_code) {
-      setUserCode(module.exercises[currentExercise].starter_code || '')
+    async function fetchModule() {
+      if (!skill) return
+      
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await fetch(`/api/training/modules/${skill}`)
+        
+        if (!response.ok) {
+          throw new Error(`Module "${skill}" not found`)
+        }
+        
+        const data = await response.json()
+        setModule(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load module')
+      } finally {
+        setLoading(false)
+      }
     }
-    setShowSolution(false)
-    setSelectedAnswer(null)
+
+    fetchModule()
+  }, [skill])
+
+  // Reset exercise state when changing exercise
+  useEffect(() => {
+    if (module?.exercises[currentExercise]) {
+      const ex = module.exercises[currentExercise]
+      setUserCode(ex.starter_code || '')
+      setShowSolution(false)
+      setSelectedAnswer(null)
+    }
   }, [currentExercise, module])
 
-  if (!module) {
+  if (loading) {
     return (
-      <div style={{ maxWidth: 1440, margin: '0 auto', padding: '40px 24px' }}>
-        <div className="glass" style={{ padding: 60, textAlign: 'center' }}>
-          <p style={{ fontSize: 48, marginBottom: 12 }}>🚧</p>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#F1F5F9', marginBottom: 8 }}>
-            Тренажёр в разработке
+      <div style={{ maxWidth: 1440, margin: '0 auto', padding: '60px 24px', textAlign: 'center' }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+        <div style={{ color: 'var(--text-2)', fontSize: '16px' }}>Загрузка модуля...</div>
+      </div>
+    )
+  }
+
+  if (error || !module) {
+    return (
+      <div style={{ maxWidth: 1440, margin: '0 auto', padding: '60px 24px' }}>
+        <div className="glass" style={{ padding: '60px', textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-1)', marginBottom: '12px' }}>
+            Модуль не найден
           </h2>
-          <p style={{ fontSize: 14, color: '#94A3B8' }}>
-            Модуль для навыка "{decodedSkill}" скоро появится
+          <p style={{ color: 'var(--text-2)', marginBottom: '24px' }}>
+            {error || `Тренажёр для "${skill}" пока недоступен`}
           </p>
+          <Link to="/gap-analyzer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+            ← Вернуться к анализу пробелов
+          </Link>
         </div>
       </div>
     )
@@ -183,297 +112,348 @@ export function Trainer() {
   const exercise = module.exercises[currentExercise]
   const progress = ((currentExercise + 1) / module.exercises.length) * 100
 
-  const playAudio = () => {
-    setIsPlaying(true)
-    const utterance = new SpeechSynthesisUtterance(module.audio_script)
-    utterance.lang = 'ru-RU'
-    utterance.rate = 0.9
-    utterance.onend = () => setIsPlaying(false)
-    window.speechSynthesis.speak(utterance)
-  }
-
-  const stopAudio = () => {
-    window.speechSynthesis.cancel()
-    setIsPlaying(false)
-  }
-
   const checkAnswer = () => {
-    if (exercise.type === 'quiz') {
-      return selectedAnswer === exercise.correct_answer
+    if (exercise.type === 'quiz' && exercise.correct !== undefined) {
+      return selectedAnswer === exercise.correct
     }
-    if (exercise.type === 'code') {
-      return userCode.trim().includes(exercise.solution?.split('=')[1]?.trim() || '')
-    }
-    return false
+    return null
   }
+
+  const isCorrect = checkAnswer()
 
   return (
-    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 32 }}>
-      
+    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '40px 24px' }}>
       {/* Header */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="tag">🎯 Интерактивный тренажёр</span>
-          <span className="tag" style={{ background: 'rgba(16,185,129,.08)', color: '#10B981', borderColor: 'rgba(16,185,129,.2)' }}>
-            Виртуальная среда
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <span style={{ fontSize: 32 }}>{module.icon}</span>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-1)' }}>
+            {module.title}
+          </h1>
+          <span style={{
+            padding: '4px 12px',
+            background: 'rgba(var(--accent-rgb), 0.15)',
+            color: 'var(--accent)',
+            borderRadius: '999px',
+            fontSize: '12px',
+            fontWeight: 700,
+            textTransform: 'uppercase'
+          }}>
+            {module.level}
           </span>
         </div>
-        <h1 style={{
-          fontSize: 'clamp(1.6rem,4vw,2.6rem)', fontWeight: 900, letterSpacing: '-0.04em',
-          background: 'linear-gradient(135deg, #F1F5F9, #10B981, #22D3EE)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-        }}>
-          {module.title}
-        </h1>
-        <p style={{ fontSize: 14, color: '#94A3B8', maxWidth: 680, lineHeight: 1.7 }}>
-          Теория + практические задания + аудио объяснение. Прогресс: {Math.round(progress)}%
+        <p style={{ color: 'var(--text-2)', fontSize: 14 }}>
+          Реальные задания из вакансий + интерактивные упражнения
         </p>
-        
-        {/* Progress bar */}
-        <div style={{ height: 6, background: 'rgba(255,255,255,.05)', borderRadius: 99, overflow: 'hidden', marginTop: 8 }}>
-          <div style={{
-            width: `${progress}%`,
-            height: '100%',
-            background: 'linear-gradient(90deg, #10B981, #22D3EE)',
-            borderRadius: 99,
-            transition: 'width .3s',
-          }} />
-        </div>
-      </section>
+      </div>
 
-      {/* Tab switcher */}
-      <div style={{ display: 'flex', gap: 12 }}>
+      {/* Tab Navigation */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: '1px solid var(--surface-2)' }}>
         <button
           onClick={() => setActiveTab('theory')}
           style={{
-            padding: '12px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600,
-            background: activeTab === 'theory' ? 'rgba(34,211,238,.12)' : 'rgba(255,255,255,.03)',
-            color: activeTab === 'theory' ? '#22D3EE' : '#94A3B8',
-            border: activeTab === 'theory' ? '1px solid rgba(34,211,238,.3)' : '1px solid rgba(255,255,255,.08)',
-            cursor: 'pointer', transition: 'all .2s',
-          }}>
-          📖 Теория
+            padding: '12px 24px',
+            background: activeTab === 'theory' ? 'var(--surface-2)' : 'transparent',
+            color: activeTab === 'theory' ? 'var(--text-1)' : 'var(--text-2)',
+            border: 'none',
+            borderBottom: activeTab === 'theory' ? '2px solid var(--accent)' : 'none',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          📚 Теория
         </button>
         <button
           onClick={() => setActiveTab('exercises')}
           style={{
-            padding: '12px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600,
-            background: activeTab === 'exercises' ? 'rgba(16,185,129,.12)' : 'rgba(255,255,255,.03)',
-            color: activeTab === 'exercises' ? '#10B981' : '#94A3B8',
-            border: activeTab === 'exercises' ? '1px solid rgba(16,185,129,.3)' : '1px solid rgba(255,255,255,.08)',
-            cursor: 'pointer', transition: 'all .2s',
-          }}>
+            padding: '12px 24px',
+            background: activeTab === 'exercises' ? 'var(--surface-2)' : 'transparent',
+            color: activeTab === 'exercises' ? 'var(--text-1)' : 'var(--text-2)',
+            border: 'none',
+            borderBottom: activeTab === 'exercises' ? '2px solid var(--accent)' : 'none',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
           💪 Упражнения ({module.exercises.length})
         </button>
       </div>
 
-      {activeTab === 'theory' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
-          
-          {/* Theory text with markdown */}
-          <div className="glass" style={{ padding: 28 }}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#F1F5F9', marginBottom: 16 }}>Теория</h3>
-            <div 
-              style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.8, whiteSpace: 'pre-line' }}
-              dangerouslySetInnerHTML={{ __html: parseMarkdown(module.theory) }}
-            />
+      {/* Theory Tab */}
+      {activeTab === 'theory' && (
+        <div className="glass" style={{ padding: 40 }}>
+          <div 
+            style={{ 
+              fontSize: 15, 
+              lineHeight: 1.8, 
+              color: '#CBD5E1'
+            }}
+            dangerouslySetInnerHTML={{ __html: parseMarkdown(module.theory) }}
+          />
+        </div>
+      )}
+
+      {/* Exercises Tab */}
+      {activeTab === 'exercises' && (
+        <div>
+          {/* Progress */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 14, color: 'var(--text-2)', fontWeight: 600 }}>
+                Упражнение {currentExercise + 1} из {module.exercises.length}
+              </span>
+              <span style={{ fontSize: 14, color: 'var(--accent)', fontWeight: 700 }}>
+                {Math.round(progress)}%
+              </span>
+            </div>
+            <div style={{ 
+              height: 8, 
+              background: 'var(--surface-2)', 
+              borderRadius: '999px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${progress}%`,
+                background: 'linear-gradient(90deg, var(--accent), var(--accent-bright))',
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
           </div>
 
-          {/* Audio player */}
-          <div className="glass" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#F1F5F9', marginBottom: 8 }}>🎧 Аудио объяснение</h3>
-              <p style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.6 }}>
-                Слушайте теорию в удобном формате. Используется синтез речи.
-              </p>
-            </div>
-
-            <div style={{
-              padding: 20,
-              background: 'rgba(34,211,238,.08)',
-              border: '1px solid rgba(34,211,238,.2)',
-              borderRadius: 12,
-              textAlign: 'center',
-            }}>
-              {!isPlaying ? (
-                <button
-                  onClick={playAudio}
-                  className="btn-primary"
-                  style={{ padding: '14px 28px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 8, margin: '0 auto' }}>
-                  <span style={{ fontSize: 20 }}>▶</span>
-                  Воспроизвести
-                </button>
-              ) : (
-                <button
-                  onClick={stopAudio}
-                  style={{
-                    padding: '14px 28px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 8, margin: '0 auto',
-                    background: 'rgba(244,63,94,.15)', color: '#F43F5E', border: '1px solid rgba(244,63,94,.3)',
-                    borderRadius: 99, cursor: 'pointer', fontWeight: 600,
-                  }}>
-                  <span style={{ fontSize: 20 }}>⏸</span>
-                  Остановить
-                </button>
+          {/* Exercise Card */}
+          <div className="glass" style={{ padding: 40 }}>
+            {/* Exercise Header */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <span style={{ fontSize: 24 }}>
+                  {exercise.type === 'quiz' && '❓'}
+                  {exercise.type === 'code' && '💻'}
+                  {exercise.type === 'terminal' && '⚡'}
+                </span>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-1)' }}>
+                  {exercise.title || exercise.question || `Задание ${currentExercise + 1}`}
+                </h3>
+              </div>
+              {exercise.description && (
+                <p 
+                  style={{ fontSize: 15, color: '#CBD5E1', lineHeight: 1.6 }}
+                  dangerouslySetInnerHTML={{ __html: parseMarkdown(exercise.description) }}
+                />
               )}
             </div>
 
-            <div style={{ fontSize: 11, color: '#94A3B8', padding: 12, background: 'rgba(255,255,255,.02)', borderRadius: 8 }}>
-              <strong style={{ color: '#CBD5E1' }}>Скрипт:</strong> {module.audio_script.slice(0, 150)}...
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
-          
-          {/* Exercise panel */}
-          <div className="glass" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#F1F5F9' }}>
-                  Задание {currentExercise + 1} / {module.exercises.length}
-                </h3>
-                <span className="tag" style={{
-                  background: exercise.type === 'code' ? 'rgba(34,211,238,.1)' : exercise.type === 'quiz' ? 'rgba(245,158,11,.1)' : 'rgba(129,140,248,.1)',
-                  color: exercise.type === 'code' ? '#22D3EE' : exercise.type === 'quiz' ? '#F59E0B' : '#818CF8',
-                  borderColor: exercise.type === 'code' ? 'rgba(34,211,238,.3)' : exercise.type === 'quiz' ? 'rgba(245,158,11,.3)' : 'rgba(129,140,248,.3)',
-                }}>
-                  {exercise.type === 'code' ? '💻 Код' : exercise.type === 'quiz' ? '❓ Тест' : '⌨️ Terminal'}
-                </span>
-              </div>
-              <p style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.7 }}>{exercise.question}</p>
-            </div>
-
-            {/* Exercise UI */}
+            {/* Quiz Exercise */}
             {exercise.type === 'quiz' && exercise.options && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {exercise.options.map((opt, i) => {
-                  const isSelected = selectedAnswer === i
-                  const isCorrect = i === exercise.correct_answer
-                  const showResult = showSolution
-                  
-                  return (
-                    <button key={i}
-                      onClick={() => setSelectedAnswer(i)}
-                      disabled={showSolution}
+              <div style={{ marginTop: 24 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {exercise.options.map((option, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedAnswer(idx)}
                       style={{
-                        padding: '14px 16px', textAlign: 'left', borderRadius: 10, fontSize: 13,
-                        background: showResult
-                          ? (isCorrect ? 'rgba(16,185,129,.1)' : isSelected ? 'rgba(244,63,94,.1)' : 'rgba(255,255,255,.02)')
-                          : (isSelected ? 'rgba(34,211,238,.1)' : 'rgba(255,255,255,.02)'),
-                        border: showResult
-                          ? (isCorrect ? '1px solid rgba(16,185,129,.3)' : isSelected ? '1px solid rgba(244,63,94,.3)' : '1px solid rgba(255,255,255,.06)')
-                          : (isSelected ? '1px solid rgba(34,211,238,.3)' : '1px solid rgba(255,255,255,.06)'),
-                        color: showResult
-                          ? (isCorrect ? '#10B981' : isSelected ? '#F43F5E' : '#94A3B8')
-                          : (isSelected ? '#22D3EE' : '#CBD5E1'),
-                        cursor: showSolution ? 'not-allowed' : 'pointer',
-                        fontWeight: isSelected || isCorrect ? 600 : 400,
-                      }}>
-                      {opt}
-                      {showResult && isCorrect && <span style={{ marginLeft: 8 }}>✓</span>}
-                      {showResult && isSelected && !isCorrect && <span style={{ marginLeft: 8 }}>✗</span>}
+                        padding: '16px 20px',
+                        background: selectedAnswer === idx 
+                          ? (showSolution 
+                            ? (idx === exercise.correct ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)')
+                            : 'var(--surface-3)')
+                          : 'var(--surface-2)',
+                        border: selectedAnswer === idx 
+                          ? (showSolution
+                            ? (idx === exercise.correct ? '2px solid #22C55E' : '2px solid #EF4444')
+                            : '2px solid var(--accent)')
+                          : '1px solid var(--surface-3)',
+                        borderRadius: 12,
+                        color: 'var(--text-1)',
+                        fontSize: 15,
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, marginRight: 12, color: 'var(--accent)' }}>
+                        {String.fromCharCode(65 + idx)}.
+                      </span>
+                      {option}
                     </button>
-                  )
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
 
-            {exercise.type === 'code' && (
-              <textarea
-                value={userCode}
-                onChange={e => setUserCode(e.target.value)}
-                disabled={showSolution}
-                style={{
-                  width: '100%', minHeight: 180, padding: 16, borderRadius: 10,
-                  background: 'rgba(8,12,20,.6)', color: '#E2E8F0', border: '1px solid rgba(255,255,255,.1)',
-                  fontFamily: 'var(--font-mono)', fontSize: 13, lineHeight: 1.6,
-                  resize: 'vertical',
-                }}
-                placeholder="Введите код..."
-              />
-            )}
-
-            {exercise.type === 'terminal' && (
-              <div style={{
-                padding: 16, borderRadius: 10, background: 'rgba(8,12,20,.8)',
-                border: '1px solid rgba(34,211,238,.2)', fontFamily: 'var(--font-mono)', fontSize: 13,
-              }}>
-                <div style={{ color: '#10B981', marginBottom: 8 }}>$ <span style={{ color: '#64748B' }}>Введите команду в терминале</span></div>
-                {showSolution && (
-                  <div style={{ color: '#22D3EE' }}>$ {exercise.solution}</div>
+                {showSolution && exercise.explanation && (
+                  <div style={{
+                    marginTop: 20,
+                    padding: 16,
+                    background: 'rgba(var(--accent-rgb), 0.1)',
+                    border: '1px solid var(--accent)',
+                    borderRadius: 8
+                  }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)', marginBottom: 8 }}>
+                      💡 Объяснение:
+                    </div>
+                    <div style={{ fontSize: 14, color: '#E2E8F0', lineHeight: 1.6 }}>
+                      {exercise.explanation}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-              <button
-                onClick={() => setShowSolution(true)}
-                disabled={showSolution}
-                className="btn-primary"
-                style={{ flex: 1, opacity: showSolution ? 0.5 : 1, cursor: showSolution ? 'not-allowed' : 'pointer' }}>
-                {checkAnswer() ? '✓ Правильно!' : 'Проверить'}
-              </button>
-              {showSolution && (
-                <button
-                  onClick={() => {
-                    if (currentExercise < module.exercises.length - 1) {
-                      setCurrentExercise(currentExercise + 1)
-                    }
+            {/* Code Exercise */}
+            {exercise.type === 'code' && (
+              <div style={{ marginTop: 24 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase' }}>
+                    Ваш код:
+                  </label>
+                </div>
+                <textarea
+                  value={userCode}
+                  onChange={(e) => setUserCode(e.target.value)}
+                  style={{
+                    width: '100%',
+                    minHeight: 200,
+                    padding: 16,
+                    background: 'var(--surface-1)',
+                    border: '1px solid var(--surface-3)',
+                    borderRadius: 8,
+                    color: 'var(--text-1)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    resize: 'vertical'
                   }}
-                  className="btn-primary"
-                  style={{ flex: 1, background: 'linear-gradient(135deg, #10B981, #22D3EE)' }}>
-                  Следующее →
-                </button>
-              )}
-            </div>
+                  spellCheck={false}
+                />
 
-            {showSolution && !checkAnswer() && exercise.solution && (
-              <div style={{
-                padding: 14, borderRadius: 10, background: 'rgba(245,158,11,.08)',
-                border: '1px solid rgba(245,158,11,.2)',
-              }}>
-                <p style={{ fontSize: 11, color: '#F59E0B', marginBottom: 6, fontWeight: 600 }}>💡 Решение:</p>
-                <code style={{ fontSize: 12, color: '#CBD5E1', fontFamily: 'var(--font-mono)' }}>
-                  {exercise.solution}
-                </code>
+                {showSolution && exercise.solution && (
+                  <div style={{ marginTop: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 8 }}>
+                      ✅ Решение:
+                    </div>
+                    <pre style={{
+                      padding: 16,
+                      background: 'var(--surface-1)',
+                      border: '1px solid var(--accent)',
+                      borderRadius: 8,
+                      color: '#E2E8F0',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 13,
+                      lineHeight: 1.6,
+                      overflow: 'auto'
+                    }}>
+                      {exercise.solution}
+                    </pre>
+                  </div>
+                )}
               </div>
             )}
-          </div>
 
-          {/* Hints panel */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div className="glass" style={{ padding: 18 }}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 10 }}>💡 Подсказка</h4>
-              <p style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.6 }}>
-                {exercise.type === 'code' && 'Используйте автодополнение IDE. Не забудьте про отступы.'}
-                {exercise.type === 'quiz' && 'Вернитесь к теории если не уверены. Правильный ответ только один.'}
-                {exercise.type === 'terminal' && 'Скопируйте команду и выполните в своём терминале для практики.'}
-              </p>
-            </div>
-
-            <div className="glass" style={{ padding: 18 }}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 10 }}>📊 Прогресс</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {module.exercises.map((_, i) => (
-                  <div key={i} style={{
-                    padding: '8px 10px', borderRadius: 6,
-                    background: i === currentExercise ? 'rgba(34,211,238,.1)' : i < currentExercise ? 'rgba(16,185,129,.08)' : 'rgba(255,255,255,.02)',
-                    border: i === currentExercise ? '1px solid rgba(34,211,238,.3)' : i < currentExercise ? '1px solid rgba(16,185,129,.2)' : '1px solid rgba(255,255,255,.05)',
-                    display: 'flex', alignItems: 'center', gap: 8,
-                  }}>
-                    <span style={{
-                      fontSize: 10,
-                      color: i === currentExercise ? '#22D3EE' : i < currentExercise ? '#10B981' : '#64748B',
+            {/* Terminal Exercise */}
+            {exercise.type === 'terminal' && (
+              <div style={{ marginTop: 24 }}>
+                {exercise.command && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>
+                      Команда:
+                    </div>
+                    <pre style={{
+                      padding: 16,
+                      background: 'var(--surface-1)',
+                      border: '1px solid var(--surface-3)',
+                      borderRadius: 8,
+                      color: 'var(--accent)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 14,
+                      overflow: 'auto'
                     }}>
-                      {i < currentExercise ? '✓' : i === currentExercise ? '→' : '○'}
-                    </span>
-                    <span style={{ fontSize: 11, color: i <= currentExercise ? '#F1F5F9' : '#64748B' }}>
-                      Задание {i + 1}
-                    </span>
+                      {exercise.command}
+                    </pre>
                   </div>
-                ))}
+                )}
+
+                {showSolution && exercise.expected_output && (
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>
+                      Ожидаемый результат:
+                    </div>
+                    <pre style={{
+                      padding: 16,
+                      background: 'var(--surface-1)',
+                      border: '1px solid var(--accent)',
+                      borderRadius: 8,
+                      color: '#E2E8F0',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 13,
+                      lineHeight: 1.6,
+                      overflow: 'auto'
+                    }}>
+                      {exercise.expected_output}
+                    </pre>
+                  </div>
+                )}
               </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: 12, marginTop: 32 }}>
+              {!showSolution && (
+                <button
+                  onClick={() => setShowSolution(true)}
+                  style={{
+                    padding: '12px 24px',
+                    background: 'var(--accent)',
+                    color: 'var(--surface-1)',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Показать решение
+                </button>
+              )}
+
+              {currentExercise < module.exercises.length - 1 && (
+                <button
+                  onClick={() => {
+                    setCurrentExercise(currentExercise + 1)
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    background: 'var(--surface-3)',
+                    color: 'var(--text-1)',
+                    border: '1px solid var(--surface-4)',
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Следующее упражнение →
+                </button>
+              )}
+
+              {currentExercise === module.exercises.length - 1 && (
+                <Link
+                  to="/gap-analyzer"
+                  style={{
+                    padding: '12px 24px',
+                    background: 'linear-gradient(135deg, var(--accent), var(--accent-bright))',
+                    color: 'var(--surface-1)',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    textDecoration: 'none',
+                    display: 'inline-block'
+                  }}
+                >
+                  🎉 Завершить модуль
+                </Link>
+              )}
             </div>
           </div>
         </div>
