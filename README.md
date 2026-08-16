@@ -76,12 +76,20 @@ redis-server
 
 ### Docker Compose
 
+**Development:**
 ```bash
 docker-compose up -d
 ```
 
+**Production:**
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+# или используйте deployment script
+./scripts/deploy_production.sh
+```
+
 Приложение будет доступно на:
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:3004 (production) / http://localhost:3000 (dev)
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 

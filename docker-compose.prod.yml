@@ -1,0 +1,121 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: ai-skills-db
+    environment:
+      POSTGRES_DB: ai_skills
+      POSTGRES_USER: ${POSTGRES_USER:-ai_skills_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ai_skills_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-skills-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai-skills-backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ai_skills_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_skills
+      REDIS_URL: redis://redis:6379/0
+      HH_API_KEY: ${HH_API_KEY}
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://ai-skills.syntog.ru}
+      ENVIRONMENT: production
+      DEBUG: "False"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./ml:/app/ml
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai-skills-celery-worker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ai_skills_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_skills
+      REDIS_URL: redis://redis:6379/0
+      HH_API_KEY: ${HH_API_KEY}
+    volumes:
+      - ./backend:/app
+      - ./scrapers:/app/scrapers
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A app.celery_worker worker --loglevel=info --concurrency=4
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai-skills-celery-beat
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ai_skills_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/ai_skills
+      REDIS_URL: redis://redis:6379/0
+      HH_API_KEY: ${HH_API_KEY}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A app.celery_worker beat --loglevel=info
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: ai-skills-frontend
+    ports:
+      - "3004:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  default:
+    name: ai-skills-network
