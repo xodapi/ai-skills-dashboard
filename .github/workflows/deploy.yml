@@ -55,12 +55,14 @@ jobs:
       - name: Check for import errors in build
         run: |
           cd frontend/dist
-          if grep -r "Failed to resolve import" .; then
+          if grep -r "Failed to resolve import" . 2>/dev/null; then
             echo "❌ Vite import errors in build!"
             exit 1
           fi
-          if grep -r 'import.*from.*\.tsx' .; then
+          if grep -r 'import.*from.*\.tsx' . 2>/dev/null; then
             echo "❌ Uncompiled .tsx code in build!"
+            echo "Found .tsx imports in:"
+            grep -rl 'import.*from.*\.tsx' . 2>/dev/null || true
             exit 1
           fi
           echo "✅ Build clean"
