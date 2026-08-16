@@ -678,6 +678,322 @@ for doc in result["source_documents"]:
         ]
     },
 
+    # ===== MLflow =====
+    "MLflow": {
+        "title": "MLflow для ML experiment tracking",
+        "icon": "📊",
+        "level": "intermediate",
+        "theory": """
+**MLflow** — платформа для управления ML lifecycle: эксперименты, модели, deployment.
+
+**Ключевые компоненты:**
+- Tracking — логирование параметров, метрик, артефактов
+- Projects — воспроизводимые эксперименты
+- Models — packaging и deployment моделей
+- Registry — централизованное хранилище моделей
+
+**Production patterns:**
+- Autologging для PyTorch/TensorFlow/scikit-learn
+- Model versioning и stage transitions (Staging→Production)
+- Model signature для валидации input/output
+- Custom metrics и artifacts (confusion matrices, plots)
+""",
+        "exercises": [
+            {
+                "type": "quiz",
+                "question": "Какой MLflow компонент используется для сохранения и загрузки обученных моделей?",
+                "options": [
+                    "mlflow.tracking",
+                    "mlflow.models",
+                    "mlflow.projects",
+                    "mlflow.registry"
+                ],
+                "correct": 1,
+                "explanation": "mlflow.models предоставляет API для сохранения моделей в универсальном формате с метаданными."
+            },
+            {
+                "type": "code",
+                "title": "Реальная задача: tracking эксперимента с PyTorch",
+                "description": "Логируйте обучение PyTorch модели с метриками, параметрами и артефактами.",
+                "starter_code": """import mlflow
+import mlflow.pytorch
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+
+# Простая модель для классификации
+class SimpleClassifier(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_classes):
+        super().__init__()
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_dim, num_classes)
+    
+    def forward(self, x):
+        return self.fc2(self.relu(self.fc1(x)))
+
+# TODO: настройте MLflow tracking
+# mlflow.set_experiment("vacancy_classifier")
+
+# TODO: логируйте параметры (learning_rate, batch_size, epochs)
+params = {
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "hidden_dim": 128,
+    "epochs": 10
+}
+
+model = SimpleClassifier(input_dim=100, hidden_dim=params["hidden_dim"], num_classes=5)
+optimizer = torch.optim.Adam(model.parameters(), lr=params["learning_rate"])
+
+# TODO: в цикле обучения логируйте метрики каждую эпоху
+
+# TODO: сохраните модель с signature
+""",
+                "solution": """import mlflow
+import mlflow.pytorch
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from mlflow.models.signature import infer_signature
+import numpy as np
+
+class SimpleClassifier(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_classes):
+        super().__init__()
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_dim, num_classes)
+    
+    def forward(self, x):
+        return self.fc2(self.relu(self.fc1(x)))
+
+# Настройка MLflow
+mlflow.set_tracking_uri("http://mlflow-server:5000")
+mlflow.set_experiment("vacancy_classifier")
+
+# Параметры эксперимента
+params = {
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "hidden_dim": 128,
+    "epochs": 10,
+    "optimizer": "adam"
+}
+
+# Начинаем run
+with mlflow.start_run(run_name="baseline_v1"):
+    # Логируем параметры
+    mlflow.log_params(params)
+    
+    # Создаём модель
+    model = SimpleClassifier(
+        input_dim=100, 
+        hidden_dim=params["hidden_dim"], 
+        num_classes=5
+    )
+    optimizer = torch.optim.Adam(model.parameters(), lr=params["learning_rate"])
+    criterion = nn.CrossEntropyLoss()
+    
+    # Включаем autologging для PyTorch
+    mlflow.pytorch.autolog()
+    
+    # Цикл обучения
+    for epoch in range(params["epochs"]):
+        model.train()
+        epoch_loss = 0
+        epoch_acc = 0
+        
+        # Тренировочный цикл (упрощённо)
+        # for batch in train_loader: ...
+        
+        # Логируем метрики
+        mlflow.log_metrics({
+            "train_loss": epoch_loss,
+            "train_accuracy": epoch_acc,
+        }, step=epoch)
+    
+    # Сохраняем модель с signature
+    dummy_input = torch.randn(1, 100)
+    signature = infer_signature(
+        dummy_input.numpy(), 
+        model(dummy_input).detach().numpy()
+    )
+    
+    mlflow.pytorch.log_model(
+        model, 
+        "model",
+        signature=signature,
+        registered_model_name="vacancy_classifier"
+    )
+    
+    # Логируем артефакты (confusion matrix, plots)
+    # mlflow.log_artifact("confusion_matrix.png")
+    
+    print(f"Run ID: {mlflow.active_run().info.run_id}")
+""",
+                "test_cases": [
+                    {"input": "Training run", "expected": "Metrics logged, model saved to MLflow"},
+                ]
+            },
+            {
+                "type": "terminal",
+                "title": "Загрузка модели из Registry",
+                "description": "Загрузите production версию модели из MLflow Registry.",
+                "command": "mlflow models serve -m 'models:/vacancy_classifier/Production' -p 5001",
+                "expected_output": "Model serving on port 5001"
+            }
+        ]
+    },
+
+    # ===== scikit-learn =====
+    "scikit-learn": {
+        "title": "scikit-learn для классического ML",
+        "icon": "🔬",
+        "level": "intermediate",
+        "theory": """
+**scikit-learn** — стандарт для классического машинного обучения.
+
+**Production best practices:**
+- Pipeline для объединения preprocessing + model
+- ColumnTransformer для разных трансформаций
+- GridSearchCV / RandomizedSearchCV для tuning
+- cross_validate для честной оценки
+- joblib для сериализации моделей
+
+**Типичные задачи:**
+- Feature engineering (StandardScaler, OneHotEncoder)
+- Model selection (cross-validation, metrics)
+- Ensemble methods (RandomForest, GradientBoosting)
+- Dimensionality reduction (PCA, t-SNE)
+""",
+        "exercises": [
+            {
+                "type": "quiz",
+                "question": "Какой компонент scikit-learn позволяет применять разные трансформации к разным колонкам?",
+                "options": [
+                    "Pipeline",
+                    "ColumnTransformer",
+                    "FeatureUnion",
+                    "StandardScaler"
+                ],
+                "correct": 1,
+                "explanation": "ColumnTransformer позволяет применять разные preprocessing шаги к числовым и категориальным признакам."
+            },
+            {
+                "type": "code",
+                "title": "Реальная задача: предсказание зарплаты по навыкам",
+                "description": "Создайте Pipeline для предсказания зарплаты на основе навыков и опыта.",
+                "starter_code": """from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import cross_val_score
+import pandas as pd
+
+# Датасет: вакансии с навыками
+data = pd.DataFrame({
+    'experience_years': [1, 3, 5, 2, 7, 4, 6, 3, 8, 5],
+    'employment_type': ['full', 'full', 'remote', 'full', 'remote', 'full', 'remote', 'full', 'remote', 'full'],
+    'has_python': [1, 1, 1, 1, 1, 0, 1, 1, 1, 0],
+    'has_pytorch': [0, 1, 1, 0, 1, 0, 1, 0, 1, 0],
+    'has_docker': [0, 0, 1, 1, 1, 1, 1, 0, 1, 1],
+    'salary': [80, 150, 280, 120, 400, 180, 350, 140, 500, 200]  # в тыс. руб.
+})
+
+X = data.drop('salary', axis=1)
+y = data['salary']
+
+# TODO: создайте ColumnTransformer
+# - числовые признаки (experience_years) → StandardScaler
+# - категориальные (employment_type) → OneHotEncoder
+# - остальные (навыки) → passthrough
+
+# TODO: создайте Pipeline с preprocessing + RandomForestRegressor
+
+# TODO: оцените модель через cross-validation (MAE, R²)
+""",
+                "solution": """from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import cross_val_score, cross_validate
+import pandas as pd
+import numpy as np
+
+data = pd.DataFrame({
+    'experience_years': [1, 3, 5, 2, 7, 4, 6, 3, 8, 5],
+    'employment_type': ['full', 'full', 'remote', 'full', 'remote', 'full', 'remote', 'full', 'remote', 'full'],
+    'has_python': [1, 1, 1, 1, 1, 0, 1, 1, 1, 0],
+    'has_pytorch': [0, 1, 1, 0, 1, 0, 1, 0, 1, 0],
+    'has_docker': [0, 0, 1, 1, 1, 1, 1, 0, 1, 1],
+    'salary': [80, 150, 280, 120, 400, 180, 350, 140, 500, 200]
+})
+
+X = data.drop('salary', axis=1)
+y = data['salary']
+
+# Определяем типы признаков
+numeric_features = ['experience_years']
+categorical_features = ['employment_type']
+skill_features = ['has_python', 'has_pytorch', 'has_docker']
+
+# ColumnTransformer для разных preprocessing
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numeric_features),
+        ('cat', OneHotEncoder(drop='first', sparse_output=False), categorical_features),
+        ('skills', 'passthrough', skill_features)
+    ]
+)
+
+# Pipeline: preprocessing + model
+pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('model', RandomForestRegressor(
+        n_estimators=100,
+        max_depth=5,
+        random_state=42
+    ))
+])
+
+# Cross-validation с несколькими метриками
+scoring = ['neg_mean_absolute_error', 'r2']
+cv_results = cross_validate(
+    pipeline, X, y, 
+    cv=3,  # 3-fold CV (мало данных)
+    scoring=scoring,
+    return_train_score=True
+)
+
+print("Cross-validation results:")
+print(f"MAE: {-cv_results['test_neg_mean_absolute_error'].mean():.1f}K ± {cv_results['test_neg_mean_absolute_error'].std():.1f}K")
+print(f"R²: {cv_results['test_r2'].mean():.3f} ± {cv_results['test_r2'].std():.3f}")
+
+# Обучаем финальную модель
+pipeline.fit(X, y)
+
+# Feature importance
+feature_names = (
+    numeric_features + 
+    list(pipeline.named_steps['preprocessor']
+         .named_transformers_['cat']
+         .get_feature_names_out(categorical_features)) +
+    skill_features
+)
+importances = pipeline.named_steps['model'].feature_importances_
+
+print("\\nTop features:")
+for name, imp in sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)[:5]:
+    print(f"  {name}: {imp:.3f}")
+""",
+                "test_cases": [
+                    {"input": "Training data", "expected": "Pipeline trained, CV scores printed"},
+                ]
+            }
+        ]
+    },
+
     # ===== SQL =====
     "SQL": {
         "title": "SQL для ML/AI аналитики",
@@ -772,6 +1088,407 @@ LIMIT 20;
                 "description": "Оптимизируйте медленный запрос используя EXPLAIN ANALYZE.",
                 "command": "psql -d skills_db -c 'EXPLAIN ANALYZE SELECT ...'",
                 "expected_output": "Query plan with execution time and index usage"
+            }
+        ]
+    },
+
+    # ===== Computer Vision =====
+    "Computer Vision": {
+        "title": "Computer Vision для production",
+        "icon": "👁️",
+        "level": "advanced",
+        "theory": """
+**Computer Vision** — обработка и анализ изображений с помощью ML.
+
+**Ключевые задачи:**
+- Image classification (ResNet, EfficientNet, ViT)
+- Object detection (YOLO, Faster R-CNN, DETR)
+- Semantic segmentation (U-Net, DeepLab)
+- Image generation (Stable Diffusion, DALL-E)
+
+**Production patterns:**
+- Data augmentation (albumentations, torchvision transforms)
+- Transfer learning и fine-tuning
+- Model optimization (quantization, pruning, distillation)
+- Inference optimization (ONNX, TensorRT, OpenVINO)
+- Preprocessing pipelines (resize, normalize, crop)
+
+**Типичные требования в вакансиях:**
+- Опыт с OpenCV, PIL, albumentations
+- Fine-tuning SOTA моделей (CLIP, SAM, DINO)
+- Deployment на edge devices (Raspberry Pi, Jetson)
+- Real-time inference (30+ FPS)
+""",
+        "exercises": [
+            {
+                "type": "quiz",
+                "question": "Какая библиотека даёт наиболее производительные augmentations для CV?",
+                "options": [
+                    "torchvision.transforms",
+                    "imgaug",
+                    "albumentations",
+                    "PIL.ImageEnhance"
+                ],
+                "correct": 2,
+                "explanation": "albumentations оптимизирована для скорости, поддерживает batched operations и работает быстрее аналогов."
+            },
+            {
+                "type": "code",
+                "title": "Реальная задача: fine-tuning ResNet для классификации скриншотов вакансий",
+                "description": "Fine-tune предобученный ResNet для классификации скриншотов (IT/Finance/Healthcare/Retail).",
+                "starter_code": """import torch
+import torch.nn as nn
+from torchvision import models, transforms
+from torch.utils.data import Dataset, DataLoader
+from PIL import Image
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+
+class VacancyScreenshotDataset(Dataset):
+    def __init__(self, image_paths, labels, transform=None):
+        self.image_paths = image_paths
+        self.labels = labels
+        self.transform = transform
+    
+    def __len__(self):
+        return len(self.image_paths)
+    
+    def __getitem__(self, idx):
+        # TODO: загрузите изображение, примените transforms
+        pass
+
+# TODO: создайте augmentation pipeline с albumentations
+train_transform = A.Compose([
+    # TODO: resize, rotate, normalize
+])
+
+# TODO: загрузите предобученный ResNet18
+model = models.resnet18(pretrained=True)
+
+# TODO: заморозьте backbone, замените последний слой для 4 классов
+
+# TODO: обучите модель с transfer learning
+""",
+                "solution": """import torch
+import torch.nn as nn
+from torchvision import models
+from torch.utils.data import Dataset, DataLoader
+from PIL import Image
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import numpy as np
+
+class VacancyScreenshotDataset(Dataset):
+    def __init__(self, image_paths, labels, transform=None):
+        self.image_paths = image_paths
+        self.labels = labels
+        self.transform = transform
+    
+    def __len__(self):
+        return len(self.image_paths)
+    
+    def __getitem__(self, idx):
+        image = Image.open(self.image_paths[idx]).convert('RGB')
+        image = np.array(image)
+        
+        if self.transform:
+            augmented = self.transform(image=image)
+            image = augmented['image']
+        
+        return image, self.labels[idx]
+
+# Augmentation pipeline
+train_transform = A.Compose([
+    A.Resize(224, 224),
+    A.HorizontalFlip(p=0.5),
+    A.RandomBrightnessContrast(p=0.3),
+    A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15, p=0.5),
+    A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ToTensorV2()
+])
+
+val_transform = A.Compose([
+    A.Resize(224, 224),
+    A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ToTensorV2()
+])
+
+# Загрузка предобученной модели
+model = models.resnet18(weights='IMAGENET1K_V1')
+
+# Заморозка backbone (feature extractor)
+for param in model.parameters():
+    param.requires_grad = False
+
+# Замена последнего слоя для 4 классов
+num_classes = 4
+model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+# Optimizer только для последнего слоя
+optimizer = torch.optim.Adam(model.fc.parameters(), lr=0.001)
+
+# Loss и training loop
+criterion = nn.CrossEntropyLoss()
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = model.to(device)
+
+def train_epoch(model, dataloader, criterion, optimizer, device):
+    model.train()
+    running_loss = 0.0
+    correct = 0
+    total = 0
+    
+    for images, labels in dataloader:
+        images, labels = images.to(device), labels.to(device)
+        
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        
+        running_loss += loss.item()
+        _, predicted = outputs.max(1)
+        total += labels.size(0)
+        correct += predicted.eq(labels).sum().item()
+    
+    return running_loss / len(dataloader), 100. * correct / total
+
+# После нескольких эпох можно разморозить backbone и fine-tune с меньшим lr
+# for param in model.parameters():
+#     param.requires_grad = True
+# optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+
+print("Model ready for training")
+print(f"Total parameters: {sum(p.numel() for p in model.parameters())}")
+print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+""",
+                "test_cases": [
+                    {"input": "Screenshot dataset", "expected": "Model trains, accuracy improves"},
+                ]
+            },
+            {
+                "type": "terminal",
+                "title": "Экспорт модели в ONNX для production",
+                "description": "Экспортируйте обученную ResNet в ONNX и проверьте inference speed.",
+                "command": "python export_onnx.py && onnxruntime_perf_test model.onnx",
+                "expected_output": "ONNX model exported, inference < 10ms per image"
+            }
+        ]
+    },
+
+    # ===== Transformers =====
+    "Transformers": {
+        "title": "Transformers (HuggingFace) для NLP/CV",
+        "icon": "🤗",
+        "level": "advanced",
+        "theory": """
+**Transformers** — библиотека HuggingFace для работы с transformer моделями.
+
+**Поддерживаемые задачи:**
+- NLP: BERT, GPT, T5, LLaMA (text classification, NER, QA, generation)
+- Vision: ViT, CLIP, SAM (image classification, object detection)
+- Multimodal: CLIP, Flamingo (image+text)
+- Audio: Whisper, Wav2Vec2 (ASR, audio classification)
+
+**Production patterns:**
+- Pipeline API для быстрого inference
+- Trainer API для fine-tuning
+- Accelerate для distributed training
+- PEFT (LoRA, QLoRA) для efficient fine-tuning
+- Quantization (bitsandbytes, GPTQ)
+
+**Требования в вакансиях:**
+- Fine-tuning BERT/GPT на custom данных
+- Prompt engineering для LLMs
+- RAG системы с embeddings
+- Inference optimization (batching, caching)
+""",
+        "exercises": [
+            {
+                "type": "quiz",
+                "question": "Какая техника позволяет fine-tune LLM с минимальным использованием памяти?",
+                "options": [
+                    "Full fine-tuning",
+                    "LoRA (Low-Rank Adaptation)",
+                    "Gradient accumulation",
+                    "Mixed precision training"
+                ],
+                "correct": 1,
+                "explanation": "LoRA замораживает основные веса и обучает только low-rank адаптеры, экономя до 90% памяти."
+            },
+            {
+                "type": "code",
+                "title": "Реальная задача: NER для извлечения навыков из вакансий",
+                "description": "Fine-tune BERT для Named Entity Recognition (NER) - извлечение названий навыков из текста вакансий.",
+                "starter_code": """from transformers import (
+    AutoTokenizer, 
+    AutoModelForTokenClassification,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForTokenClassification
+)
+from datasets import Dataset
+import torch
+
+# Датасет: тексты вакансий с размеченными навыками
+# Format: BIO tagging (B-SKILL, I-SKILL, O)
+train_data = [
+    {
+        "tokens": ["Требуется", "опыт", "с", "Python", "и", "PyTorch"],
+        "ner_tags": [0, 0, 0, 1, 0, 1]  # 0=O, 1=B-SKILL, 2=I-SKILL
+    },
+    # TODO: добавьте больше примеров
+]
+
+# TODO: создайте Dataset и токенизируйте
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+model = AutoModelForTokenClassification.from_pretrained(
+    "bert-base-multilingual-cased",
+    num_labels=3  # O, B-SKILL, I-SKILL
+)
+
+# TODO: настройте TrainingArguments и Trainer
+
+# TODO: обучите модель и протестируйте на новом тексте
+""",
+                "solution": """from transformers import (
+    AutoTokenizer, 
+    AutoModelForTokenClassification,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForTokenClassification
+)
+from datasets import Dataset
+import torch
+import numpy as np
+
+# Расширенный датасет
+train_data = [
+    {
+        "tokens": ["Требуется", "опыт", "с", "Python", "и", "PyTorch"],
+        "ner_tags": [0, 0, 0, 1, 0, 1]
+    },
+    {
+        "tokens": ["Знание", "Docker", ",", "Kubernetes", "обязательно"],
+        "ner_tags": [0, 1, 0, 1, 0]
+    },
+    {
+        "tokens": ["ML", "Engineer", "со", "знанием", "TensorFlow"],
+        "ner_tags": [1, 0, 0, 0, 1]
+    },
+]
+
+label_names = ["O", "B-SKILL", "I-SKILL"]
+id2label = {i: label for i, label in enumerate(label_names)}
+label2id = {label: i for i, label in enumerate(label_names)}
+
+# Tokenization с выравниванием labels
+tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+
+def tokenize_and_align_labels(examples):
+    tokenized_inputs = tokenizer(
+        examples["tokens"],
+        truncation=True,
+        is_split_into_words=True,
+        padding=False
+    )
+    
+    labels = []
+    for i, label in enumerate(examples["ner_tags"]):
+        word_ids = tokenized_inputs.word_ids(batch_index=i)
+        label_ids = []
+        previous_word_idx = None
+        
+        for word_idx in word_ids:
+            if word_idx is None:
+                label_ids.append(-100)  # Special tokens
+            elif word_idx != previous_word_idx:
+                label_ids.append(label[word_idx])
+            else:
+                label_ids.append(-100)  # Subword tokens
+            previous_word_idx = word_idx
+        
+        labels.append(label_ids)
+    
+    tokenized_inputs["labels"] = labels
+    return tokenized_inputs
+
+# Создаём Dataset
+dataset = Dataset.from_dict({
+    "tokens": [ex["tokens"] for ex in train_data],
+    "ner_tags": [ex["ner_tags"] for ex in train_data]
+})
+tokenized_dataset = dataset.map(
+    tokenize_and_align_labels,
+    batched=True,
+    remove_columns=dataset.column_names
+)
+
+# Модель
+model = AutoModelForTokenClassification.from_pretrained(
+    "bert-base-multilingual-cased",
+    num_labels=len(label_names),
+    id2label=id2label,
+    label2id=label2id
+)
+
+# Training arguments
+training_args = TrainingArguments(
+    output_dir="./ner_model",
+    learning_rate=2e-5,
+    per_device_train_batch_size=8,
+    num_train_epochs=3,
+    weight_decay=0.01,
+    logging_steps=10,
+    save_strategy="epoch"
+)
+
+# Data collator для padding
+data_collator = DataCollatorForTokenClassification(tokenizer)
+
+# Trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized_dataset,
+    data_collator=data_collator,
+    tokenizer=tokenizer
+)
+
+# Обучение
+trainer.train()
+
+# Inference на новом тексте
+def extract_skills(text):
+    inputs = tokenizer(text.split(), is_split_into_words=True, return_tensors="pt")
+    with torch.no_grad():
+        outputs = model(**inputs)
+    
+    predictions = torch.argmax(outputs.logits, dim=2)
+    predicted_labels = [id2label[p.item()] for p in predictions[0]]
+    
+    skills = []
+    for token, label in zip(text.split(), predicted_labels[1:-1]):  # Skip [CLS] and [SEP]
+        if label.startswith("B-"):
+            skills.append(token)
+    
+    return skills
+
+test_text = "Ищем ML Engineer с опытом в PyTorch и Docker"
+print(f"Extracted skills: {extract_skills(test_text)}")
+""",
+                "test_cases": [
+                    {"input": "Vacancy text", "expected": "Skills extracted: PyTorch, Docker"},
+                ]
+            },
+            {
+                "type": "terminal",
+                "title": "Inference с batching для высокой пропускной способности",
+                "description": "Используйте pipeline с batching для обработки 1000+ вакансий.",
+                "command": "python batch_inference.py --batch-size 32 --num-workers 4",
+                "expected_output": "Processed 1000 vacancies in < 30 seconds"
             }
         ]
     },
