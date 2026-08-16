@@ -11,6 +11,7 @@ const NAV = [
   { name: 'Аналитика', href: '/analytics', icon: '⊞' },
   { name: 'Радар', href: '/radar', icon: '◎' },
   { name: 'Пробелы', href: '/gap-analyzer', icon: '⊕' },
+  { name: 'Открытия', href: '/discovery', icon: '◬' },
 ]
 
 export function Header() {

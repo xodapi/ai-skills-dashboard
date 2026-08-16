@@ -10,6 +10,7 @@ import { Analytics } from '@/pages/Analytics'
 import { Radar } from '@/pages/Radar'
 import { GapAnalyzer } from '@/pages/GapAnalyzer'
 import { Trainer } from '@/pages/Trainer'
+import { Discovery } from '@/pages/Discovery'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="radar" element={<Radar />} />
         <Route path="gap-analyzer" element={<GapAnalyzer />} />
+        <Route path="discovery" element={<Discovery />} />
         <Route path="trainer/:skill" element={<Trainer />} />
       </Route>
     </Routes>
