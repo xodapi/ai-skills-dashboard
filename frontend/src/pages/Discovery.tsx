@@ -82,8 +82,7 @@ const LS_KEY_DONE = 'discoveryDone'
 const LS_KEY_SAVED = 'discoverySaved'
 
 export function Discovery() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [mySkills, setMySkills] = useState<string[]>(() => {
+  const [mySkills, _setMySkills] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(LS_KEY_SKILLS) ?? '[]') } catch { return [] }
   })
   const [doneSkills, setDoneSkills] = useState<string[]>(() => {
