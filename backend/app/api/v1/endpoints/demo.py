@@ -463,6 +463,23 @@ async def import_github_skills(
         "Shell":      ["Linux", "CI/CD"],
         "HCL":        ["Terraform"],
         "YAML":       ["Kubernetes", "CI/CD"],
+        "Markdown":   [],  # Skip markdown for language-based skills
+    }
+    
+    # AI Agent Management indicators (commit messages, README patterns, issue count)
+    AI_MANAGEMENT_PATTERNS = {
+        "cursor": "AI Coding Tools",
+        "copilot": "AI Coding Tools", 
+        "cline": "AI Coding Tools",
+        "factory": "AI Coding Tools",
+        "aider": "AI Coding Tools",
+        "chatgpt": "AI Coding Tools",
+        "claude": "AI Coding Tools",
+        "agent": "AI Agent Management",
+        "prompt": "Prompt Engineering",
+        "instruction": "Prompt Engineering",
+        "specification": "Technical Specification",
+        "requirements": "Requirements Engineering",
     }
     TOPIC_TO_SKILLS: dict = {
         "pytorch":       ["PyTorch", "Deep Learning"],
@@ -533,24 +550,62 @@ async def import_github_skills(
 
         lang_counts: dict = {}
         total_bytes = 0
+        total_commits = 0
+        readme_analysis = []
+        
         for repo in repos:
             if repo.get("fork"):
                 continue
+            
+            # Language analysis
             lang = repo.get("language") or ""
             if lang:
                 lang_counts[lang] = lang_counts.get(lang, 0) + 1
                 total_bytes += 1
             for s in LANG_TO_SKILLS.get(lang, []):
                 add_skill(s, f"language:{lang}", "language")
+            
+            # Topic analysis
             for topic in repo.get("topics", []):
                 for s in TOPIC_TO_SKILLS.get(topic, []):
                     add_skill(s, f"topic:{topic}", "topic")
+            
+            # AI Management indicators from repo name and description
+            repo_name = repo.get("name", "").lower()
+            repo_desc = (repo.get("description") or "").lower()
+            repo_text = f"{repo_name} {repo_desc}"
+            
+            for pattern, skill in AI_MANAGEMENT_PATTERNS.items():
+                if pattern in repo_text:
+                    add_skill(skill, f"repo:{repo['name']}", "management")
+            
+            # Count commits as proxy for project management activity
+            total_commits += repo.get("size", 0)  # size is rough proxy
+            
+            # Analyze README for management patterns (if we fetch it)
+            readme_analysis.append({
+                "repo": repo["name"],
+                "has_issues": repo.get("has_issues", False),
+                "open_issues": repo.get("open_issues_count", 0),
+            })
 
         # Language percentage breakdown
         raw_languages = {
             lang: round(count / max(total_bytes, 1) * 100, 1)
             for lang, count in sorted(lang_counts.items(), key=lambda x: -x[1])
         }
+        
+        # Add management skills based on issue activity
+        total_issues = sum(r["open_issues"] for r in readme_analysis)
+        if total_issues > 10:
+            add_skill("Project Management", f"{total_issues} issues managed", "management")
+        if total_issues > 30:
+            add_skill("Technical Leadership", f"{total_issues} issues managed", "management")
+        
+        # Detect AI coding patterns: high commit activity + AI tool mentions
+        ai_tool_skills = [s for s in inferred if inferred[s]["source_type"] == "management"]
+        if ai_tool_skills and total_commits > 500:
+            add_skill("AI-Assisted Development", "High activity with AI tools", "management")
 
         # Cross-reference with known skills in our DB
         known = {s["skill"] for s in DEMO_STATS}

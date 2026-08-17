@@ -195,6 +195,28 @@ ARCHETYPES = [
         "salary_range": (80_000, 160_000),
         "weight": 12,
     },
+    {
+        "id": "ai_team_lead",
+        "complexity": "senior_eng",
+        "math_required": False,
+        "label": "AI Team Lead / Engineering Manager",
+        "titles": ["AI Team Lead", "ML Engineering Manager", "AI Product Manager"],
+        "core": ["Project Management", "Technical Leadership", "AI-Assisted Development", "Git", "Python"],
+        "extras": ["Prompt Engineering", "Requirements Engineering", "Technical Specification", "AI Coding Tools", "Agile"],
+        "description": (
+            "Lead AI/ML engineering teams, coordinate development with AI coding assistants, "
+            "write technical specifications, and manage project delivery."
+        ),
+        "requirements": (
+            "3+ years managing technical teams or leading AI projects. "
+            "Experience coordinating work with AI coding tools (Cursor, Copilot, Cline). "
+            "Strong written communication for specs, requirements, and code review. "
+            "Understanding of ML/AI concepts without necessarily writing production ML code."
+        ),
+        "experience_range": (3, 8),
+        "salary_range": (280_000, 450_000),
+        "weight": 8,
+    },
 ]
 
 # Complexity metadata for UI rendering
