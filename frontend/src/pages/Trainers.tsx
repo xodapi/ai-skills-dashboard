@@ -1,0 +1,196 @@
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
+
+const API = '/api/v1'
+
+// ── Trainer catalog ────────────────────────────────────────────────────────────
+interface TrainerMeta {
+  slug: string
+  title: string
+  icon: string
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
+  estimatedMinutes: number
+  totalExercises: number
+  description: string
+  comingSoon?: boolean
+}
+
+const TRAINERS: TrainerMeta[] = [
+  { slug: 'python', title: 'Python', icon: '🐍', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 8, description: 'Основы синтаксиса, типы данных, list comprehensions' },
+  { slug: 'pytorch', title: 'PyTorch', icon: '🔥', difficulty: 'Intermediate', estimatedMinutes: 45, totalExercises: 10, description: 'Тензоры, autograd, построение нейросетей' },
+  { slug: 'docker', title: 'Docker', icon: '🐳', difficulty: 'Beginner', estimatedMinutes: 35, totalExercises: 9, description: 'Контейнеризация, Dockerfile, docker-compose' },
+  { slug: 'kubernetes', title: 'Kubernetes', icon: '☸️', difficulty: 'Advanced', estimatedMinutes: 50, totalExercises: 12, description: 'Pods, Deployments, Services, масштабирование' },
+  { slug: 'langchain', title: 'LangChain', icon: '🦜', difficulty: 'Intermediate', estimatedMinutes: 40, totalExercises: 10, description: 'Цепочки промптов, агенты, RAG-системы' },
+  { slug: 'sql', title: 'SQL', icon: '🗄️', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 8, description: 'SELECT, JOIN, GROUP BY, подзапросы' },
+  { slug: 'mlflow', title: 'MLflow', icon: '📊', difficulty: 'Intermediate', estimatedMinutes: 35, totalExercises: 9, description: 'Tracking экспериментов, модели, registry' },
+  { slug: 'scikit-learn', title: 'scikit-learn', icon: '🤖', difficulty: 'Intermediate', estimatedMinutes: 40, totalExercises: 10, description: 'Классификация, регрессия, пайплайны' },
+  { slug: 'computer vision', title: 'Computer Vision', icon: '👁️', difficulty: 'Advanced', estimatedMinutes: 45, totalExercises: 11, description: 'CNN, детекция объектов, сегментация' },
+  { slug: 'transformers', title: 'Transformers', icon: '🤗', difficulty: 'Advanced', estimatedMinutes: 50, totalExercises: 12, description: 'BERT, GPT, fine-tuning, токенизация' },
+  { slug: 'pandas', title: 'Pandas', icon: '🐼', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 8, description: 'DataFrame, фильтрация, группировки, join' },
+  { slug: 'fastapi', title: 'FastAPI', icon: '⚡', difficulty: 'Intermediate', estimatedMinutes: 35, totalExercises: 9, description: 'REST API, валидация, async endpoints' },
+  { slug: 'opencv', title: 'OpenCV', icon: '📷', difficulty: 'Intermediate', estimatedMinutes: 40, totalExercises: 10, description: 'Обработка изображений, фильтры, детекция' },
+  { slug: 'airflow', title: 'Airflow', icon: '🌀', difficulty: 'Advanced', estimatedMinutes: 45, totalExercises: 11, description: 'DAG, операторы, расписания, мониторинг' },
+  { slug: 'terraform', title: 'Terraform', icon: '🏗️', difficulty: 'Advanced', estimatedMinutes: 40, totalExercises: 10, description: 'IaC, провайдеры, модули, state' },
+]
+
+const DIFFICULTY_COLOR: Record<string, string> = {
+  Beginner: '#10B981',
+  Intermediate: '#F59E0B',
+  Advanced: '#F43F5E',
+}
+
+export function Trainers() {
+  const { token } = useAuth()
+
+  const { data: progressData } = useQuery<{ module: string; exercises_completed: string[] }[]>({
+    queryKey: ['user-progress', token],
+    queryFn: () =>
+      fetch(`${API}/users/me/progress`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    enabled: !!token,
+    staleTime: 60_000,
+  })
+
+  const progressMap = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const p of progressData ?? []) {
+      map.set(p.module, p.exercises_completed.length)
+    }
+    return map
+  }, [progressData])
+
+  return (
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+      {/* Header */}
+      <section>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <span className="tag">Тренажёры</span>
+          <span className="tag" style={{ background: 'rgba(34,211,238,.1)', color: 'var(--cyan)', borderColor: 'rgba(34,211,238,.25)' }}>
+            {TRAINERS.length} модулей
+          </span>
+        </div>
+        <h1 style={{
+          fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 900, letterSpacing: '-0.04em',
+          background: 'linear-gradient(135deg, var(--text-1), var(--cyan))',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          marginBottom: 8,
+        }}>
+          Каталог тренажёров
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>
+          Интерактивные модули с теорией и практическими упражнениями — от основ Python до продвинутых ML-инструментов.
+        </p>
+      </section>
+
+      {/* Trainer grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+        {TRAINERS.map(trainer => {
+          const completed = progressMap.get(trainer.slug) ?? 0
+          const progressPct = trainer.totalExercises > 0 ? Math.round((completed / trainer.totalExercises) * 100) : 0
+          const diffColor = DIFFICULTY_COLOR[trainer.difficulty]
+
+          return (
+            <Link
+              key={trainer.slug}
+              to={trainer.comingSoon ? '#' : `/trainer/${encodeURIComponent(trainer.slug)}`}
+              style={{
+                display: 'flex', flexDirection: 'column', gap: 12,
+                padding: '20px 22px', borderRadius: 12,
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                textDecoration: 'none', transition: 'all .2s',
+                cursor: trainer.comingSoon ? 'default' : 'pointer',
+                opacity: trainer.comingSoon ? 0.5 : 1,
+              }}
+              onMouseEnter={e => {
+                if (!trainer.comingSoon) {
+                  const el = e.currentTarget as HTMLAnchorElement
+                  el.style.borderColor = 'color-mix(in srgb, var(--accent) 40%, transparent)'
+                  el.style.boxShadow = '0 4px 24px rgba(0,0,0,.3)'
+                }
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLAnchorElement
+                el.style.borderColor = 'var(--border)'
+                el.style.boxShadow = 'none'
+              }}
+            >
+              {/* Icon + title */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 32 }}>{trainer.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-1)', marginBottom: 2 }}>
+                    {trainer.title}
+                  </p>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{
+                      fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700,
+                      background: `color-mix(in srgb, ${diffColor} 12%, transparent)`,
+                      color: diffColor, border: `1px solid color-mix(in srgb, ${diffColor} 25%, transparent)`,
+                    }}>
+                      {trainer.difficulty}
+                    </span>
+                    <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                      {trainer.estimatedMinutes} мин
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                {trainer.description}
+              </p>
+
+              {/* Progress bar */}
+              {!trainer.comingSoon && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                      {completed} / {trainer.totalExercises} упражнений
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: progressPct === 100 ? '#10B981' : 'var(--accent)' }}>
+                      {progressPct}%
+                    </span>
+                  </div>
+                  <div style={{ height: 5, background: 'var(--surface-4)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 99, width: `${progressPct}%`,
+                      background: progressPct === 100 ? '#10B981' : 'var(--accent)',
+                      transition: 'width .5s ease',
+                    }} />
+                  </div>
+                  {progressPct === 100 && (
+                    <p style={{ fontSize: 11, color: '#10B981', fontWeight: 700, marginTop: 6 }}>
+                      ✓ Завершено
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {trainer.comingSoon && (
+                <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(148,163,184,.1)', border: '1px solid rgba(148,163,184,.2)', textAlign: 'center' }}>
+                  <p style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>Coming Soon</p>
+                </div>
+              )}
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* CTA */}
+      <div className="glass" style={{ padding: '24px 28px', textAlign: 'center' }}>
+        <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 16 }}>
+          Не видишь нужный тренажёр? Добавим по запросу.
+        </p>
+        <Link to="/gap-analyzer" style={{
+          padding: '10px 22px', borderRadius: 99, fontSize: 13, fontWeight: 700,
+          background: 'var(--accent)', color: '#fff', textDecoration: 'none',
+        }}>
+          Анализ пробелов →
+        </Link>
+      </div>
+    </div>
+  )
+}

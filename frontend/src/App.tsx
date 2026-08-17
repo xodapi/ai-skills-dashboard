@@ -10,6 +10,7 @@ import { Analytics } from '@/pages/Analytics'
 import { Radar } from '@/pages/Radar'
 import { GapAnalyzer } from '@/pages/GapAnalyzer'
 import Trainer from '@/pages/Trainer'
+import { Trainers } from '@/pages/Trainers'
 import { Discovery } from '@/pages/Discovery'
 import { SalaryCalculator } from '@/pages/SalaryCalculator'
 import { RoleRoadmap } from '@/pages/RoleRoadmap'
@@ -36,6 +37,7 @@ function App() {
         <Route path="gap-analyzer" element={<GapAnalyzer />} />
         <Route path="discovery" element={<Discovery />} />
         <Route path="trainer/:skill" element={<Trainer />} />
+        <Route path="trainers" element={<Trainers />} />
         <Route path="salary-calculator" element={<SalaryCalculator />} />
         <Route path="roadmap" element={<RoleRoadmap />} />
         <Route path="assessment" element={<AdaptiveAssessment />} />

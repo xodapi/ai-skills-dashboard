@@ -27,6 +27,7 @@ const NAV_GROUPS = [
     items: [
       { name: 'Зарплата',   href: '/salary-calculator', icon: '💰' },
       { name: 'Roadmap',    href: '/roadmap',            icon: '🗺️' },
+      { name: 'Тренажёры',  href: '/trainers',           icon: '🎓' },
       { name: 'Тест IQ',    href: '/assessment',         icon: '🧠' },
       { name: 'Прогноз',    href: '/forecast',           icon: '📈' },
     ],
