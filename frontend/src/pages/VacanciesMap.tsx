@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/context/AuthContext'
 
 const API = '/api/v1'
 
@@ -38,6 +39,8 @@ interface Vacancy {
 }
 
 export function VacanciesMap() {
+  const { token, isAuthenticated } = useAuth()
+  const qc = useQueryClient()
   const [city, setCity] = useState('')
   const [skill, setSkill] = useState('')
   const [search, setSearch] = useState('')
@@ -82,6 +85,36 @@ export function VacanciesMap() {
   const total: number = data?.total ?? 0
 
   const toggle = (id: number) => setExpanded(prev => prev === id ? null : id)
+
+  // Fetch bookmarks to check which vacancies are already saved
+  const { data: bookmarksData } = useQuery({
+    queryKey: ['bookmarks', token],
+    queryFn: () =>
+      fetch(`${API}/users/me/bookmarks`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    enabled: !!token,
+    staleTime: 60_000,
+  })
+  const bookmarkedIds = new Set((bookmarksData ?? []).map((b: { id: string }) => String(b.id)))
+
+  // Bookmark mutation
+  const bookmarkMutation = useMutation({
+    mutationFn: (v: Vacancy) =>
+      fetch(`${API}/users/me/bookmarks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
+        body: JSON.stringify({ vacancy: { ...v, id: String(v.id) } }),
+      }).then(r => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmarks'] }),
+  })
+
+  const handleBookmark = (e: React.MouseEvent, v: Vacancy) => {
+    e.stopPropagation()
+    if (!isAuthenticated) {
+      alert('Войдите через GitHub для сохранения вакансий')
+      return
+    }
+    bookmarkMutation.mutate(v)
+  }
 
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -158,6 +191,7 @@ export function VacanciesMap() {
             const pubDate = v.published_at
               ? new Date(v.published_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
               : null
+            const isBookmarked = bookmarkedIds.has(String(v.id))
 
             return (
               <div key={v.id} className="glass"
@@ -265,7 +299,39 @@ export function VacanciesMap() {
                       </div>
                     )}
                     {v.url && (
-                      <div style={{ paddingTop: 4 }}>
+                      <div style={{ paddingTop: 4, display: 'flex', gap: 10, alignItems: 'center' }}>
+                        {/* Bookmark button */}
+                        <button
+                          onClick={e => handleBookmark(e, v)}
+                          disabled={bookmarkMutation.isPending || isBookmarked}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 7,
+                            padding: '8px 18px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+                            background: isBookmarked ? 'rgba(129,140,248,.15)' : 'rgba(129,140,248,.1)',
+                            color: isBookmarked ? '#818CF8' : '#A5B4FC',
+                            border: `1px solid ${isBookmarked ? 'rgba(129,140,248,.35)' : 'rgba(129,140,248,.25)'}`,
+                            cursor: isBookmarked ? 'default' : 'pointer',
+                            transition: 'all .2s',
+                            opacity: bookmarkMutation.isPending ? 0.6 : 1,
+                          }}
+                          onMouseEnter={e => {
+                            if (!isBookmarked && !bookmarkMutation.isPending) {
+                              const el = e.currentTarget as HTMLButtonElement
+                              el.style.background = 'rgba(129,140,248,.18)'
+                              el.style.boxShadow = '0 0 16px rgba(129,140,248,.2)'
+                            }
+                          }}
+                          onMouseLeave={e => {
+                            const el = e.currentTarget as HTMLButtonElement
+                            el.style.background = isBookmarked ? 'rgba(129,140,248,.15)' : 'rgba(129,140,248,.1)'
+                            el.style.boxShadow = 'none'
+                          }}
+                        >
+                          <span style={{ fontSize: 15 }}>{isBookmarked ? '🔖' : '🏷️'}</span>
+                          {bookmarkMutation.isPending ? 'Сохранение...' : isBookmarked ? 'Сохранено' : 'Сохранить'}
+                        </button>
+
+                        {/* Open link */}
                         <a
                           href={v.url}
                           target="_blank"
