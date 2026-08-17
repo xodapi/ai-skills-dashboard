@@ -595,6 +595,7 @@ async def import_github_skills(
 
 _demo_skills: dict = {}      # key: f"{token_hash}:{skill}" → {skill, level, source, updated_at}
 _demo_bookmarks: dict = {}  # key: f"{token_hash}:{vacancy_id}" → vacancy snapshot
+_demo_progress: dict = {}   # key: f"{token_hash}:{module_slug}" → {module, exercises_completed: [], updated_at}
 
 
 def _token_key(request_headers: dict) -> str:
@@ -695,9 +696,43 @@ async def demo_user_stats(request: Request) -> dict:
 
 
 @router.get("/users/me/progress")
-async def demo_user_progress() -> list:
-    """Demo: empty training progress."""
-    return []
+async def demo_user_progress(request: Request) -> list:
+    """Demo: get training progress for all modules."""
+    key = _token_key(dict(request.headers))
+    return [
+        v for k, v in _demo_progress.items()
+        if k.startswith(key + ":")
+    ]
+
+
+@router.post("/users/me/progress")
+async def demo_update_progress(body: dict, request: Request) -> dict:
+    """Demo: save completed exercise."""
+    key = _token_key(dict(request.headers))
+    module = body.get("module", "")
+    exercise_id = body.get("exercise_id", "")
+    if not module or not exercise_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="module and exercise_id are required")
+    
+    store_key = f"{key}:{module}"
+    if store_key not in _demo_progress:
+        _demo_progress[store_key] = {
+            "module": module,
+            "exercises_completed": [],
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+    
+    # Add exercise_id if not already completed
+    if exercise_id not in _demo_progress[store_key]["exercises_completed"]:
+        _demo_progress[store_key]["exercises_completed"].append(exercise_id)
+        _demo_progress[store_key]["updated_at"] = datetime.utcnow().isoformat()
+    
+    return {
+        "module": module,
+        "exercise_id": exercise_id,
+        "total_completed": len(_demo_progress[store_key]["exercises_completed"]),
+    }
 
 
 @router.get("/users/me/bookmarks")

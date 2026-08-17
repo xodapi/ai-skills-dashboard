@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/context/AuthContext'
+
+const API = '/api/v1'
 
 interface Exercise {
   type: 'code' | 'quiz' | 'terminal'
@@ -35,6 +39,9 @@ function parseMarkdown(text: string): string {
 
 export default function Trainer() {
   const { skill } = useParams<{ skill: string }>()
+  const { token } = useAuth()
+  const qc = useQueryClient()
+  
   const [module, setModule] = useState<TrainingModule | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -44,6 +51,17 @@ export default function Trainer() {
   const [userCode, setUserCode] = useState('')
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
+
+  // Progress tracking mutation
+  const progressMutation = useMutation({
+    mutationFn: (exerciseId: string) =>
+      fetch(`${API}/users/me/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
+        body: JSON.stringify({ module: skill, exercise_id: exerciseId }),
+      }).then(r => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['user-progress'] }),
+  })
 
   // Fetch module from API
   useEffect(() => {
@@ -410,6 +428,10 @@ export default function Trainer() {
               {currentExercise < module.exercises.length - 1 && (
                 <button
                   onClick={() => {
+                    // Track progress if authenticated
+                    if (token) {
+                      progressMutation.mutate(`ex-${currentExercise}`)
+                    }
                     setCurrentExercise(currentExercise + 1)
                   }}
                   style={{
@@ -424,6 +446,30 @@ export default function Trainer() {
                   }}
                 >
                   Следующее упражнение →
+                </button>
+              )}
+
+              {currentExercise === module.exercises.length - 1 && (
+                <button
+                  onClick={() => {
+                    // Track final exercise
+                    if (token) {
+                      progressMutation.mutate(`ex-${currentExercise}`)
+                    }
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    marginRight: 12,
+                  }}
+                >
+                  ✓ Завершить модуль
                 </button>
               )}
 

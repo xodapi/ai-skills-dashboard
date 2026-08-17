@@ -100,6 +100,16 @@ function MySkillsSnapshotWidget() {
     staleTime: 2 * 60_000,
   })
 
+  const { data: progressData } = useQuery<{ module: string; exercises_completed: string[] }[]>({
+    queryKey: ['user-progress-dash', token],
+    queryFn: () =>
+      fetch(`${API}/users/me/progress`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    enabled: !!token,
+    staleTime: 2 * 60_000,
+  })
+
+  const totalExercises = (progressData ?? []).reduce((sum, m) => sum + m.exercises_completed.length, 0)
+
   const LEVEL_COLOR = (l: number) =>
     l >= 90 ? '#F59E0B' : l >= 75 ? '#10B981' : l >= 50 ? '#22D3EE' : l >= 25 ? '#818CF8' : '#94A3B8'
 
@@ -144,6 +154,10 @@ function MySkillsSnapshotWidget() {
           <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
             <p style={{ fontSize: 22, fontWeight: 900, color: '#10B981', lineHeight: 1 }}>{stats.avg_skill_level ?? 0}</p>
             <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>средний ур.</p>
+          </div>
+          <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
+            <p style={{ fontSize: 22, fontWeight: 900, color: '#F59E0B', lineHeight: 1 }}>{totalExercises}</p>
+            <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>упражнений</p>
           </div>
         </div>
       )}
