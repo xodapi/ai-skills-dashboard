@@ -3,7 +3,7 @@ Pydantic schemas for user-related API endpoints.
 """
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, computed_field
 
 
 # User schemas
@@ -67,21 +67,25 @@ class UserPrivate(UserPublic):
     last_login: Optional[datetime] = None
     
     # Aliases for frontend compatibility
+    @computed_field
     @property
     def login(self) -> str:
         """Alias for username (GitHub-style)."""
         return self.username
     
+    @computed_field
     @property
     def name(self) -> Optional[str]:
         """Alias for display_name."""
         return self.display_name
     
+    @computed_field
     @property
     def company(self) -> Optional[str]:
         """Placeholder for company field."""
         return None
     
+    @computed_field
     @property
     def role(self) -> str:
         """User role."""
