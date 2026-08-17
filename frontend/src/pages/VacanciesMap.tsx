@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/components/ui/Toast'
 
 const API = '/api/v1'
 
@@ -41,6 +42,7 @@ interface Vacancy {
 export function VacanciesMap() {
   const { token, isAuthenticated } = useAuth()
   const qc = useQueryClient()
+  const { showToast } = useToast()
   const [city, setCity] = useState('')
   const [skill, setSkill] = useState('')
   const [search, setSearch] = useState('')
@@ -104,13 +106,19 @@ export function VacanciesMap() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
         body: JSON.stringify({ vacancy: { ...v, id: String(v.id) } }),
       }).then(r => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmarks'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      showToast('success', 'Вакансия добавлена в закладки')
+    },
+    onError: () => {
+      showToast('error', 'Не удалось сохранить вакансию')
+    },
   })
 
   const handleBookmark = (e: React.MouseEvent, v: Vacancy) => {
     e.stopPropagation()
     if (!isAuthenticated) {
-      alert('Войдите через GitHub для сохранения вакансий')
+      showToast('warning', 'Войдите через GitHub для сохранения вакансий')
       return
     }
     bookmarkMutation.mutate(v)

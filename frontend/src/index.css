@@ -228,3 +228,15 @@ body::after {
 /* ── Theme transition ── */
 html { transition: filter .35s; }
 [data-theme="hacker"] html { filter: saturate(1.2); }
+
+/* ── Toast animation ── */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

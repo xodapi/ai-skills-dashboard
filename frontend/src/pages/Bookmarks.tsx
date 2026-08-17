@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/components/ui/Toast'
 
 const API = '/api/v1'
 
@@ -44,6 +45,7 @@ function timeAgo(iso: string): string {
 export function Bookmarks() {
   const { token, isAuthenticated } = useAuth()
   const qc = useQueryClient()
+  const { showToast } = useToast()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
 
@@ -70,7 +72,13 @@ export function Bookmarks() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token ?? ''}` },
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmarks'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      showToast('success', 'Закладка удалена')
+    },
+    onError: () => {
+      showToast('error', 'Не удалось удалить закладку')
+    },
   })
 
   if (!isAuthenticated) {

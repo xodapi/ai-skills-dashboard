@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/components/ui/Toast'
 
 const API = '/api/v1'
 
@@ -76,6 +77,7 @@ function MatchBar({ pct }: { pct: number }) {
 export function GapAnalyzer() {
   const { token, isAuthenticated } = useAuth()
   const qc = useQueryClient()
+  const { showToast } = useToast()
 
   // ── Mode: role-based or vacancy-based ─────────────────────────────────────
   const [mode, setMode] = useState<'role' | 'vacancy'>('role')
@@ -125,7 +127,13 @@ export function GapAnalyzer() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
         body: JSON.stringify({ vacancy: { ...v, id: String(v.id) } }),
       }).then(r => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmarks'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      showToast('success', 'Вакансия сохранена в закладки')
+    },
+    onError: () => {
+      showToast('error', 'Ошибка при сохранении')
+    },
   })
 
   // ── Merge my skills: user profile + manual ────────────────────────────────
