@@ -56,16 +56,53 @@ async def github_authorize(
         )
 
 
+@router.get("/github/callback", response_model=TokenResponse)
+async def github_callback_get(
+    code: str = Query(..., description="OAuth authorization code"),
+    state: Optional[str] = Query(None, description="CSRF state token"),
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """
+    Handle GitHub OAuth callback (GET redirect from GitHub).
+    
+    Args:
+        code: OAuth authorization code
+        state: CSRF state token
+        db: Database session
+        
+    Returns:
+        JWT token and user information
+    """
+    return await _process_github_callback(code, db)
+
+
 @router.post("/github/callback", response_model=TokenResponse)
-async def github_callback(
+async def github_callback_post(
     callback_data: GitHubOAuthCallback,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
     """
-    Handle GitHub OAuth callback and create or update user.
+    Handle GitHub OAuth callback (POST with JSON body).
     
     Args:
         callback_data: OAuth callback data with code
+        db: Database session
+        
+    Returns:
+        JWT token and user information
+    """
+    return await _process_github_callback(callback_data.code, db)
+
+
+async def _process_github_callback(
+    code: str,
+    db: AsyncSession,
+) -> TokenResponse:
+    """
+    Process GitHub OAuth callback code and create/update user.
+    
+    Args:
+        code: OAuth authorization code
         db: Database session
         
     Returns:
@@ -75,7 +112,7 @@ async def github_callback(
         github_oauth = get_github_oauth()
         
         # Exchange code for access token
-        access_token = await github_oauth.get_access_token(callback_data.code)
+        access_token = await github_oauth.get_access_token(code)
         
         # Get user info from GitHub
         user_info = await github_oauth.get_user_info(access_token)

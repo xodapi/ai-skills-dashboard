@@ -33,7 +33,7 @@ export function AuthCallback() {
     query.set('code', code)
     if (state) query.set('state', state)
 
-    fetch(`${API}/auth/callback?${query.toString()}`)
+    fetch(`${API}/auth/github/callback?${query.toString()}`)
       .then(r => {
         if (!r.ok) throw new Error(`callback HTTP ${r.status}`)
         return r.json()
