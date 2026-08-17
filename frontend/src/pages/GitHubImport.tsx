@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
 
 const API = '/api/v1'
 
@@ -18,10 +19,19 @@ interface GitHubSkillResult {
 interface SaveResult { saved: number; skills: string[] }
 
 export function GitHubImport() {
+  const { user } = useAuth()
   const [username, setUsername] = useState('')
   const [submitted, setSubmitted] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const qc = useQueryClient()
+
+  // Auto-fill username from authenticated user
+  useEffect(() => {
+    if (user?.login && !username && !submitted) {
+      setUsername(user.login)
+      setSubmitted(user.login)
+    }
+  }, [user, username, submitted])
 
   const { data, isFetching, isError } = useQuery<GitHubSkillResult>({
     queryKey: ['github-skills', submitted],

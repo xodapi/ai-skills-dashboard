@@ -66,6 +66,27 @@ class UserPrivate(UserPublic):
     is_verified: bool
     last_login: Optional[datetime] = None
     
+    # Aliases for frontend compatibility
+    @property
+    def login(self) -> str:
+        """Alias for username (GitHub-style)."""
+        return self.username
+    
+    @property
+    def name(self) -> Optional[str]:
+        """Alias for display_name."""
+        return self.display_name
+    
+    @property
+    def company(self) -> Optional[str]:
+        """Placeholder for company field."""
+        return None
+    
+    @property
+    def role(self) -> str:
+        """User role."""
+        return "developer"
+    
     model_config = {"from_attributes": True}
 
 
