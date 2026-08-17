@@ -1,6 +1,6 @@
 # AI Skills Dashboard - Текущий статус проекта
 
-**Последнее обновление:** 2026-08-17 (v2.5)
+**Последнее обновление:** 2026-08-17 (v2.6)
 
 **Сайт:** https://ai-skills.syntog.ru (production, HTTPS, работает)
 
@@ -41,7 +41,7 @@
 - ✅ **SkillsForecast** — прогноз спроса на 1/3/6/12 месяцев
 - ✅ **Profile** — публичный профиль пользователя (Phase 1)
 - ✅ **AuthCallback** — GitHub OAuth callback handler
-- ✅ **GitHubImport** — импорт навыков из публичных репозиториев
+- ✅ **GitHubImport** — импорт навыков из публичных репозиториев; **статистика активности**: total_commits, push_events; **определение management навыков**: AI Agent Management, Prompt Engineering, AI Team Leadership по паттернам в repo name/description
 - ✅ **MySkills** — управление навыками: добавить / изменить уровень / удалить
 
 ### Навигация
@@ -144,10 +144,11 @@ GET    /api/v1/users/{username}/skills    - Публичные навыки
 
 ## 📊 Статистика
 
-- **Коммитов:** 55+
+- **Коммитов:** 56+
 - **Backend эндпоинтов:** 40+ (включая demo Phase 2 user skill management)
 - **Frontend страниц:** 18
 - **Тренажёров:** 15 модулей
+- **GitHub Integration:** Анализ активности (commits, push events), определение management навыков
 - **Упражнений:** 45+ практических заданий
 - **Навыков в базе:** 52
 - **Вакансий (demo):** 120
