@@ -1,6 +1,6 @@
 # AI Skills Dashboard - Текущий статус проекта
 
-**Последнее обновление:** 2026-08-17 (v2.4)
+**Последнее обновление:** 2026-08-17 (v2.5)
 
 **Сайт:** https://ai-skills.syntog.ru (production, HTTPS, работает)
 
@@ -31,8 +31,10 @@
 - ✅ **Radar** — персональный технологический радар (Thoughtworks-style)
 - ✅ **GapAnalyzer** — анализ разрыва в навыках с рекомендациями
 - ✅ **GapAnalyzer** — два режима: по ролям и по вакансиям; авто-загрузка навыков профиля; топ недостающих навыков; план обучения с кнопками «Начать»
-- ✅ **Bookmarks** — сохранённые вакансии с gap-анализом; агрегация недостающих навыков; удаление; фильтр
-- ✅ **Trainer** — 15 тренажёров с теорией, упражнениями, Web Speech API
+- ✅ **Bookmarks** — сохранённые вакансии с gap-анализом; агрегация недостающих навыков; удаление; фильтр; кнопка bookmark в каталоге вакансий
+- ✅ **Trainers** — каталог 15 тренажёров с progress bars, difficulty badges, estimated time
+- ✅ **Trainer** — 15 тренажёров с теорией, упражнениями, Web Speech API; прогресс-трекинг (POST /users/me/progress)
+- ✅ **Toast notifications** — success/error/info/warning; slide-in анимация; авто-dismiss; интегрировано в bookmarks, gap-analyzer
 - ✅ **SalaryCalculator** — расчёт зарплаты по навыкам и опыту
 - ✅ **RoleRoadmap** — 8 карьерных путей с шагами обучения
 - ✅ **AdaptiveAssessment** — адаптивный тест Skill IQ
