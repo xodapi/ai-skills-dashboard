@@ -85,8 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const r = await fetch(`${API}/auth/github/authorize`)
       if (!r.ok) throw new Error('authorize failed')
-      const { redirect_url } = await r.json()
-      window.location.href = redirect_url
+      const { authorization_url } = await r.json()
+      window.location.href = authorization_url
     } catch (e) {
       console.error('GitHub OAuth redirect failed', e)
     }
