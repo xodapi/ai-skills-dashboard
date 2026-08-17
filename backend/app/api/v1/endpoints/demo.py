@@ -593,7 +593,8 @@ async def import_github_skills(
 # In production these are handled by /users/me/skills in users.py
 # ---------------------------------------------------------------------------
 
-_demo_skills: dict = {}  # key: f"{token_hash}:{skill}" → {skill, level, source, updated_at}
+_demo_skills: dict = {}      # key: f"{token_hash}:{skill}" → {skill, level, source, updated_at}
+_demo_bookmarks: dict = {}  # key: f"{token_hash}:{vacancy_id}" → vacancy snapshot
 
 
 def _token_key(request_headers: dict) -> str:
@@ -700,7 +701,48 @@ async def demo_user_progress() -> list:
 
 
 @router.get("/users/me/bookmarks")
-async def demo_user_bookmarks() -> list:
-    """Demo: empty bookmarks."""
-    return []
+async def demo_user_bookmarks(request: Request) -> list:
+    """Demo: get bookmarked vacancies."""
+    key = _token_key(dict(request.headers))
+    return [
+        v for k, v in _demo_bookmarks.items()
+        if k.startswith(key + ":")
+    ]
+
+
+@router.post("/users/me/bookmarks")
+async def demo_add_bookmark(body: dict, request: Request) -> dict:
+    """Demo: bookmark a vacancy."""
+    key = _token_key(dict(request.headers))
+    vacancy = body.get("vacancy", {})
+    vacancy_id = vacancy.get("id", "")
+    if not vacancy_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="vacancy.id is required")
+    store_key = f"{key}:{vacancy_id}"
+    _demo_bookmarks[store_key] = {
+        "id": vacancy_id,
+        "title": vacancy.get("title", ""),
+        "company": vacancy.get("company", ""),
+        "salary_min": vacancy.get("salary_min"),
+        "salary_max": vacancy.get("salary_max"),
+        "location": vacancy.get("location", ""),
+        "url": vacancy.get("url", ""),
+        "required_skills": vacancy.get("required_skills", []),
+        "bookmarked_at": datetime.utcnow().isoformat(),
+    }
+    return {"bookmarked": vacancy_id}
+
+
+@router.delete("/users/me/bookmarks/{vacancy_id}")
+async def demo_delete_bookmark(vacancy_id: str, request: Request) -> dict:
+    """Demo: remove a bookmark."""
+    key = _token_key(dict(request.headers))
+    store_key = f"{key}:{vacancy_id}"
+    if store_key not in _demo_bookmarks:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Bookmark not found")
+    del _demo_bookmarks[store_key]
+    return {"deleted": vacancy_id}
+
 

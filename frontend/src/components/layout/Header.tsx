@@ -37,6 +37,7 @@ const NAV_GROUPS = [
     items: [
       { name: 'GitHub Import', href: '/github-import', icon: '⬡' },
       { name: 'Мои навыки',    href: '/my-skills',     icon: '✎' },
+      { name: 'Закладки',      href: '/bookmarks',     icon: '🔖' },
     ],
   },
 ]

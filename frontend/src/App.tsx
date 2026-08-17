@@ -19,6 +19,7 @@ import { AuthCallback } from '@/pages/AuthCallback'
 import { Profile } from '@/pages/Profile'
 import { GitHubImport } from '@/pages/GitHubImport'
 import { MySkills } from '@/pages/MySkills'
+import { Bookmarks } from '@/pages/Bookmarks'
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
         <Route path="profile" element={<Profile />} />
         <Route path="github-import" element={<GitHubImport />} />
         <Route path="my-skills" element={<MySkills />} />
+        <Route path="bookmarks" element={<Bookmarks />} />
       </Route>
       <Route path="auth/callback" element={<AuthCallback />} />
     </Routes>
