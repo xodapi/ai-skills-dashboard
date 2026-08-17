@@ -46,6 +46,9 @@ services:
       HH_API_KEY: ${HH_API_KEY}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://ai-skills.syntog.ru}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI}
       ENVIRONMENT: production
       DEBUG: "False"
     ports:
