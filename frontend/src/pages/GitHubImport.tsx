@@ -11,6 +11,8 @@ interface GitHubSkillResult {
   name: string | null
   bio: string | null
   public_repos: number
+  total_commits: number
+  push_events: number
   skills: Array<{ skill: string; source: string; evidence: string; confidence: number }>
   raw_languages: Record<string, number>
   raw_topics: string[]
@@ -176,6 +178,18 @@ export function GitHubImport() {
                 <p style={{ fontSize: 24, fontWeight: 900, color: '#10B981' }}>{data.skills.length}</p>
                 <p style={{ fontSize: 11, color: 'var(--text-3)' }}>навыков</p>
               </div>
+              {data.total_commits > 0 && (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 24, fontWeight: 900, color: '#F59E0B' }}>{data.total_commits}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-3)' }}>коммитов</p>
+                </div>
+              )}
+              {data.push_events > 0 && (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 24, fontWeight: 900, color: '#6EE7B7' }}>{data.push_events}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-3)' }}>push events</p>
+                </div>
+              )}
             </div>
           </div>
 

@@ -539,6 +539,14 @@ async def import_github_skills(
             user_info = user_resp.json() if user_resp.status_code == 200 else {}
 
             repos = resp.json()
+            
+            # Fetch commit activity for the user (last year)
+            events_resp = await client.get(
+                f"https://api.github.com/users/{username}/events/public",
+                params={"per_page": 100},
+                headers={"Accept": "application/vnd.github.v3+json"},
+            )
+            events = events_resp.json() if events_resp.status_code == 200 else []
 
         inferred: dict = {}  # skill → {count, sources, source_type}
 
@@ -551,6 +559,7 @@ async def import_github_skills(
         lang_counts: dict = {}
         total_bytes = 0
         total_commits = 0
+        push_events = 0
         readme_analysis = []
         
         for repo in repos:
@@ -579,15 +588,20 @@ async def import_github_skills(
                 if pattern in repo_text:
                     add_skill(skill, f"repo:{repo['name']}", "management")
             
-            # Count commits as proxy for project management activity
-            total_commits += repo.get("size", 0)  # size is rough proxy
-            
             # Analyze README for management patterns (if we fetch it)
             readme_analysis.append({
                 "repo": repo["name"],
                 "has_issues": repo.get("has_issues", False),
                 "open_issues": repo.get("open_issues_count", 0),
             })
+        
+        # Count actual commits from events
+        for event in events:
+            if event.get("type") == "PushEvent":
+                push_events += 1
+                # Each PushEvent can contain multiple commits
+                commits_in_push = len(event.get("payload", {}).get("commits", []))
+                total_commits += commits_in_push
 
         # Language percentage breakdown
         raw_languages = {
@@ -604,8 +618,14 @@ async def import_github_skills(
         
         # Detect AI coding patterns: high commit activity + AI tool mentions
         ai_tool_skills = [s for s in inferred if inferred[s]["source_type"] == "management"]
-        if ai_tool_skills and total_commits > 500:
-            add_skill("AI-Assisted Development", "High activity with AI tools", "management")
+        if ai_tool_skills and total_commits > 20:
+            add_skill("AI-Assisted Development", "High commit activity with AI tools", "management")
+        
+        # High commit velocity → Project Management skill
+        if total_commits > 50:
+            add_skill("Project Management", f"{total_commits} commits (active development)", "management")
+        if total_commits > 100:
+            add_skill("Technical Leadership", f"{total_commits} commits (high velocity)", "management")
 
         # Cross-reference with known skills in our DB
         known = {s["skill"] for s in DEMO_STATS}
@@ -631,6 +651,8 @@ async def import_github_skills(
             "public_repos": user_info.get("public_repos", len(non_fork_repos)),
             "repos_analyzed": len(non_fork_repos),
             "skills_found": len(matched),
+            "total_commits": total_commits,
+            "push_events": push_events,
             "skills": matched,
             "raw_languages": raw_languages,
             "raw_topics": sorted({t for r in non_fork_repos for t in r.get("topics", [])}),
