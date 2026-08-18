@@ -21,6 +21,9 @@ import { Profile } from '@/pages/Profile'
 import { GitHubImport } from '@/pages/GitHubImport'
 import { MySkills } from '@/pages/MySkills'
 import { Bookmarks } from '@/pages/Bookmarks'
+import { Privacy } from '@/pages/Privacy'
+import { Cookies } from '@/pages/Cookies'
+import { Terms } from '@/pages/Terms'
 
 function App() {
   return (
@@ -46,6 +49,9 @@ function App() {
         <Route path="github-import" element={<GitHubImport />} />
         <Route path="my-skills" element={<MySkills />} />
         <Route path="bookmarks" element={<Bookmarks />} />
+        <Route path="privacy" element={<Privacy />} />
+        <Route path="cookies" element={<Cookies />} />
+        <Route path="terms" element={<Terms />} />
       </Route>
       <Route path="auth/callback" element={<AuthCallback />} />
     </Routes>

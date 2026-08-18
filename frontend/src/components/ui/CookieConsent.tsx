@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 
 export function CookieConsent() {
   const [isVisible, setIsVisible] = useState(false)
@@ -48,7 +49,7 @@ export function CookieConsent() {
 
       <p style={{ fontSize: 12, color: '#64748B', lineHeight: 1.55, marginBottom: 14 }}>
         Используем cookies для работы сайта и аналитики посещаемости.
-        Подробнее в <a href="#" style={{ color: '#22D3EE', textDecoration: 'none' }}>политике cookies</a>.
+        Подробнее в <Link to="/cookies" style={{ color: '#22D3EE', textDecoration: 'none' }}>политике cookies</Link>.
       </p>
 
       {/* Toggle */}

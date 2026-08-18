@@ -208,6 +208,21 @@ body::after {
 .input:focus { outline: none; border-color: var(--accent-glow); box-shadow: 0 0 0 3px var(--accent-dim); }
 .input::placeholder { color: var(--text-3); }
 
+.legal-page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legal-page-content a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.legal-page-content strong {
+  color: var(--text-1);
+}
+
 /* Light: input with visible border */
 [data-theme="light"] .input {
   background: #fff;
