@@ -46,6 +46,127 @@ const NAV_GROUPS = [
 // Flat list for active detection
 const ALL_ITEMS = NAV_GROUPS.flatMap(g => g.items)
 
+// ── Mobile menu component ────────────────────────────────────────────────────
+function MobileMenu({ pathname, onClose }: { pathname: string; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [onClose])
+
+  // Close on escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)',
+          zIndex: 999, backdropFilter: 'blur(4px)',
+          animation: 'fadeIn .2s ease-out',
+        }}
+      />
+
+      {/* Menu panel */}
+      <div
+        ref={ref}
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0,
+          width: 'min(320px, 85vw)',
+          background: 'var(--surface-1)',
+          borderLeft: '1px solid var(--border)',
+          zIndex: 1000,
+          overflowY: 'auto',
+          animation: 'slideInRight .25s ease-out',
+          boxShadow: '-8px 0 32px rgba(0,0,0,.5)',
+        }}
+      >
+        {/* Close button */}
+        <div style={{
+          display: 'flex', justifyContent: 'flex-end', padding: '16px 20px',
+          borderBottom: '1px solid var(--border)',
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              width: 36, height: 36, borderRadius: 8,
+              background: 'var(--surface-3)', border: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', fontSize: 18, color: 'var(--text-2)',
+              transition: 'all .15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--surface-4)'
+              e.currentTarget.style.borderColor = 'var(--border-hi)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'var(--surface-3)'
+              e.currentTarget.style.borderColor = 'var(--border)'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Navigation groups */}
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {NAV_GROUPS.map(group => (
+            <div key={group.label} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '.08em', color: 'var(--text-3)',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <span>{group.icon}</span>
+                {group.label}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {group.items.map(item => {
+                  const active = pathname === item.href
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      onClick={onClose}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', borderRadius: 8, textDecoration: 'none',
+                        color: active ? 'var(--accent)' : 'var(--text-2)',
+                        background: active ? 'var(--accent-dim)' : 'transparent',
+                        border: active ? '1px solid color-mix(in srgb, var(--accent) 25%, transparent)' : '1px solid transparent',
+                        fontSize: 14, fontWeight: active ? 600 : 400,
+                        transition: 'all .15s',
+                        minHeight: 44, // Touch-friendly
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--surface-4)' }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <span style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{item.icon}</span>
+                      <span style={{ flex: 1 }}>{item.name}</span>
+                      {active && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ── Dropdown component ───────────────────────────────────────────────────────
 function NavDropdown({
   group,
@@ -143,6 +264,7 @@ function NavDropdown({
 export function Header() {
   const { pathname } = useLocation()
   const { user, isAuthenticated, login, isLoading } = useAuth()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Current page label for breadcrumb hint
   const currentItem = ALL_ITEMS.find(i => i.href === pathname)
@@ -156,13 +278,13 @@ export function Header() {
       WebkitBackdropFilter: 'blur(24px) saturate(180%)',
       transition: 'background .35s, border-color .35s',
     }}>
-      <nav style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', height: 56, gap: 8 }}>
+      <nav style={{ maxWidth: 1280, margin: '0 auto', padding: '0 clamp(16px, 4vw, 24px)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', height: 56, gap: 'clamp(6px, 2vw, 8px)' }}>
 
           {/* Logo */}
           <Link to="/" style={{
-            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8,
-            flexShrink: 0, marginRight: 8,
+            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 'clamp(6px, 2vw, 8px)',
+            flexShrink: 0, marginRight: 'clamp(4px, 2vw, 8px)',
           }}>
             <span style={{
               width: 28, height: 28, borderRadius: 8,
@@ -172,22 +294,23 @@ export function Header() {
               boxShadow: 'var(--glow-sm)', flexShrink: 0,
             }}>AI</span>
             <span style={{
-              fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: 'var(--text-1)',
+              fontWeight: 700, fontSize: 'clamp(13px, 3.5vw, 15px)', letterSpacing: '-0.02em', color: 'var(--text-1)',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              Skills<span style={{ color: 'var(--accent)' }}>.</span>Analytics
+              Skills<span style={{ color: 'var(--accent)' }}>.</span><span className="hide-on-mobile">Analytics</span>
             </span>
           </Link>
 
-          {/* Divider */}
-          <div style={{ width: 1, height: 22, background: 'var(--border)', flexShrink: 0 }} />
+          {/* Divider - desktop only */}
+          <div className="hide-on-mobile" style={{ width: 1, height: 22, background: 'var(--border)', flexShrink: 0 }} />
 
-          {/* Grouped nav */}
-          <div style={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1 }}>
+          {/* Desktop nav - hidden on mobile */}
+          <div className="hide-on-mobile" style={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1 }}>
             {NAV_GROUPS.map(group => (
               <NavDropdown key={group.label} group={group} pathname={pathname} />
             ))}
 
-            {/* Current page breadcrumb pill — shows active page name */}
+            {/* Current page breadcrumb pill */}
             {currentItem && (
               <span style={{
                 marginLeft: 8, fontSize: 11, padding: '3px 10px', borderRadius: 99,
@@ -195,20 +318,24 @@ export function Header() {
                 color: 'var(--accent)',
                 border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)',
                 fontWeight: 600,
+                whiteSpace: 'nowrap',
               }}>
                 {currentItem.icon} {currentItem.name}
               </span>
             )}
           </div>
 
+          {/* Spacer for mobile */}
+          <div className="show-on-mobile" style={{ flex: 1 }} />
+
           {/* Right controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 2vw, 10px)', flexShrink: 0 }}>
             <ThemeSwitcher />
 
-            {/* Auth */}
+            {/* Auth - desktop version */}
             {!isLoading && (
               isAuthenticated && user ? (
-                <Link to="/profile" style={{
+                <Link to="/profile" className="hide-on-mobile" style={{
                   display: 'flex', alignItems: 'center', gap: 7, textDecoration: 'none',
                   padding: '4px 10px 4px 4px', borderRadius: 99,
                   background: 'var(--surface-4)', border: '1px solid var(--border)',
@@ -231,7 +358,7 @@ export function Header() {
                   </span>
                 </Link>
               ) : (
-                <button onClick={login} style={{
+                <button onClick={login} className="hide-on-mobile" style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '6px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
                   background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer',
@@ -245,15 +372,75 @@ export function Header() {
               )
             )}
 
-            {/* Live dot */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {/* Mobile: Avatar or Login icon */}
+            {!isLoading && (
+              isAuthenticated && user ? (
+                <Link to="/profile" className="show-on-mobile" style={{
+                  display: 'none', width: 36, height: 36, borderRadius: '50%',
+                  overflow: 'hidden', border: '2px solid var(--border)', flexShrink: 0,
+                }}>
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.login} style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{
+                      width: '100%', height: '100%', background: 'var(--accent-dim)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14, fontWeight: 900, color: 'var(--accent)',
+                    }}>
+                      {user.login[0].toUpperCase()}
+                    </span>
+                  )}
+                </Link>
+              ) : (
+                <button onClick={login} className="show-on-mobile" style={{
+                  display: 'none', width: 36, height: 36, borderRadius: '50%',
+                  background: 'var(--accent)', border: 'none', cursor: 'pointer',
+                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                  </svg>
+                </button>
+              )
+            )}
+
+            {/* Live dot - desktop only */}
+            <div className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <span className="pulse-dot" />
               <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Live</span>
             </div>
+
+            {/* Hamburger menu button - mobile only */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="show-on-mobile"
+              style={{
+                display: 'none', width: 40, height: 40, borderRadius: 8,
+                background: 'var(--surface-3)', border: '1px solid var(--border)',
+                alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                flexDirection: 'column', gap: 4, padding: 0, flexShrink: 0,
+                transition: 'all .15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--surface-4)'
+                e.currentTarget.style.borderColor = 'var(--border-hi)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--surface-3)'
+                e.currentTarget.style.borderColor = 'var(--border)'
+              }}
+            >
+              <span style={{ width: 18, height: 2, background: 'var(--text-2)', borderRadius: 2 }} />
+              <span style={{ width: 18, height: 2, background: 'var(--text-2)', borderRadius: 2 }} />
+              <span style={{ width: 18, height: 2, background: 'var(--text-2)', borderRadius: 2 }} />
+            </button>
           </div>
 
         </div>
       </nav>
+
+      {/* Mobile menu */}
+      {mobileMenuOpen && <MobileMenu pathname={pathname} onClose={() => setMobileMenuOpen(false)} />}
     </header>
   )
 }

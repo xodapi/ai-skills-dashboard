@@ -240,3 +240,105 @@ html { transition: filter .35s; }
     transform: translateX(0);
   }
 }
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Responsive breakpoints ── */
+/* Mobile-first approach: base styles for mobile, override for larger screens */
+
+/* Hide on mobile (< 768px) */
+@media (max-width: 767px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  
+  .show-on-mobile {
+    display: flex !important;
+  }
+  
+  /* Hide Analytics text on very small screens */
+  .hide-on-mobile-text {
+    display: none;
+  }
+}
+
+/* Show on desktop (>= 768px) */
+@media (min-width: 768px) {
+  .show-on-mobile {
+    display: none !important;
+  }
+  
+  .hide-on-mobile {
+    display: flex !important;
+  }
+}
+
+/* Touch targets: minimum 44x44px for mobile */
+@media (max-width: 767px) {
+  button, a, input, select, textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Exception for inline elements */
+  button.inline, a.inline {
+    min-height: unset;
+    min-width: unset;
+  }
+}
+
+/* Small mobile: 320px - 374px */
+@media (max-width: 374px) {
+  body {
+    font-size: 14px;
+  }
+  
+  h1 {
+    font-size: clamp(24px, 6vw, 32px) !important;
+  }
+  
+  h2 {
+    font-size: clamp(20px, 5vw, 24px) !important;
+  }
+  
+  h3 {
+    font-size: clamp(18px, 4.5vw, 20px) !important;
+  }
+}
+
+/* Medium mobile: 375px - 413px */
+@media (min-width: 375px) and (max-width: 413px) {
+  /* Optimized for iPhone SE, iPhone 12/13 mini */
+}
+
+/* Large mobile: 414px - 767px */
+@media (min-width: 414px) and (max-width: 767px) {
+  /* Optimized for iPhone 12/13 Pro Max, Android large phones */
+}
+
+/* Tablet: 768px - 1023px */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Optimized for iPad, Android tablets */
+  nav {
+    padding: 0 32px !important;
+  }
+}
+
+/* Desktop: >= 1024px */
+@media (min-width: 1024px) {
+  /* Full desktop experience */
+}
