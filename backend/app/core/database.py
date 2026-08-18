@@ -1,6 +1,7 @@
 """
 Database connection and session management.
 """
+
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -36,7 +37,7 @@ Base = declarative_base()
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency for getting async database session.
-    
+
     Yields:
         AsyncSession: Database session
     """
@@ -55,10 +56,13 @@ async def init_db() -> None:
     """Initialize database connection pool."""
     # Import models to register them with Base
     from app.models import vacancy, skill, trend, user  # noqa: F401
-    
+
     # Create tables if they don't exist
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        from app.core.schema_migrations import run_schema_migrations
+
+        await run_schema_migrations(conn)
 
 
 async def close_db() -> None:

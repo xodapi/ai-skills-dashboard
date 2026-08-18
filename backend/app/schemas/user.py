@@ -1,7 +1,8 @@
 """
 Pydantic schemas for user-related API endpoints.
 """
-from datetime import datetime
+
+from datetime import date, datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr, computed_field
 
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field, EmailStr, computed_field
 # User schemas
 class UserBase(BaseModel):
     """Base user schema."""
+
     username: str = Field(..., min_length=3, max_length=100)
     email: Optional[EmailStr] = None
     display_name: Optional[str] = Field(None, max_length=200)
@@ -21,12 +23,14 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema for creating a user."""
+
     github_id: Optional[str] = None
     avatar_url: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
     """Schema for updating user profile."""
+
     display_name: Optional[str] = Field(None, max_length=200)
     bio: Optional[str] = None
     location: Optional[str] = Field(None, max_length=200)
@@ -37,6 +41,7 @@ class UserUpdate(BaseModel):
 
 class UserSkill(BaseModel):
     """Schema for user skill with proficiency."""
+
     skill_id: int
     skill_name: str
     proficiency_level: int = Field(..., ge=1, le=5)
@@ -45,6 +50,7 @@ class UserSkill(BaseModel):
 
 class UserPublic(BaseModel):
     """Public user profile schema."""
+
     id: int
     username: str
     display_name: Optional[str] = None
@@ -53,62 +59,66 @@ class UserPublic(BaseModel):
     location: Optional[str] = None
     website: Optional[str] = None
     created_at: datetime
-    
+
     model_config = {"from_attributes": True}
 
 
 class UserPrivate(UserPublic):
     """Private user profile schema (own profile)."""
+
     email: Optional[str] = None
     github_id: Optional[str] = None
     is_public: bool
     show_email: bool
     is_verified: bool
     last_login: Optional[datetime] = None
-    
+
     # Aliases for frontend compatibility
     @computed_field
     @property
     def login(self) -> str:
         """Alias for username (GitHub-style)."""
         return self.username
-    
+
     @computed_field
     @property
     def name(self) -> Optional[str]:
         """Alias for display_name."""
         return self.display_name
-    
+
     @computed_field
     @property
     def company(self) -> Optional[str]:
         """Placeholder for company field."""
         return None
-    
+
     @computed_field
     @property
     def role(self) -> str:
         """User role."""
         return "developer"
-    
+
     model_config = {"from_attributes": True}
 
 
 # Skill management schemas
 class UserSkillAdd(BaseModel):
     """Schema for adding a skill to user profile."""
+
     skill_id: int
     proficiency_level: int = Field(1, ge=1, le=5)
 
 
 class UserSkillUpdate(BaseModel):
     """Schema for updating skill proficiency."""
+
     proficiency_level: int = Field(..., ge=1, le=5)
 
 
 # Training progress schemas
 class TrainingProgressBase(BaseModel):
     """Base training progress schema."""
+
     skill: str
     module_index: int
     completed: bool = False
@@ -118,12 +128,14 @@ class TrainingProgressBase(BaseModel):
 
 class TrainingProgressCreate(TrainingProgressBase):
     """Schema for creating training progress."""
+
     quiz_answers: Optional[str] = None
     code_solution: Optional[str] = None
 
 
 class TrainingProgressUpdate(BaseModel):
     """Schema for updating training progress."""
+
     completed: Optional[bool] = None
     score: Optional[int] = Field(None, ge=0, le=100)
     time_spent_seconds: Optional[int] = None
@@ -133,34 +145,71 @@ class TrainingProgressUpdate(BaseModel):
 
 class TrainingProgressPublic(TrainingProgressBase):
     """Public training progress schema."""
+
     id: int
     started_at: datetime
     completed_at: Optional[datetime] = None
     updated_at: datetime
-    
+    xp_awarded: int = 0
+    rewarded_at: Optional[datetime] = None
+    xp_earned: int = 0
+    new_badges: List["BadgePublic"] = Field(default_factory=list)
+
     model_config = {"from_attributes": True}
+
+
+class BadgePublic(BaseModel):
+    """A server-issued badge displayed in the learner profile."""
+
+    key: str
+    title: str
+    unlocked_at: datetime
+
+
+class ActivityDayPublic(BaseModel):
+    """One day in the learner activity heatmap."""
+
+    date: date
+    completions: int
+    xp_earned: int
+
+
+class GamificationSummary(BaseModel):
+    """XP, levels, streaks, and unlocked achievements."""
+
+    total_xp: int
+    level: int
+    xp_in_current_level: int
+    xp_to_next_level: int
+    current_streak: int
+    longest_streak: int
+    badges: List[BadgePublic]
 
 
 # Bookmark schemas
 class VacancyBookmarkCreate(BaseModel):
     """Schema for bookmarking a vacancy."""
+
     vacancy_id: int
 
 
 class VacancyBookmarkDelete(BaseModel):
     """Schema for removing a bookmark."""
+
     vacancy_id: int
 
 
 # OAuth schemas
 class GitHubOAuthCallback(BaseModel):
     """Schema for GitHub OAuth callback."""
+
     code: str
     state: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
     """Schema for authentication token response."""
+
     access_token: str
     token_type: str = "bearer"
     expires_in: int
@@ -170,6 +219,7 @@ class TokenResponse(BaseModel):
 # Stats schemas
 class UserStats(BaseModel):
     """Schema for user statistics."""
+
     total_skills: int
     completed_trainings: int
     total_time_spent_hours: float

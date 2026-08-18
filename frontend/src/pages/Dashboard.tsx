@@ -100,7 +100,7 @@ function MySkillsSnapshotWidget() {
     staleTime: 2 * 60_000,
   })
 
-  const { data: progressData } = useQuery<{ module: string; exercises_completed: string[] }[]>({
+  const { data: progressData } = useQuery<{ completed: boolean }[]>({
     queryKey: ['user-progress-dash', token],
     queryFn: () =>
       fetch(`${API}/users/me/progress`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
@@ -108,7 +108,7 @@ function MySkillsSnapshotWidget() {
     staleTime: 2 * 60_000,
   })
 
-  const totalExercises = (progressData ?? []).reduce((sum, m) => sum + m.exercises_completed.length, 0)
+  const totalExercises = (progressData ?? []).filter(progress => progress.completed).length
 
   const LEVEL_COLOR = (l: number) =>
     l >= 90 ? '#F59E0B' : l >= 75 ? '#10B981' : l >= 50 ? '#22D3EE' : l >= 25 ? '#818CF8' : '#94A3B8'

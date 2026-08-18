@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher'
 import { useAuth } from '@/context/AuthContext'
 
@@ -263,8 +264,21 @@ function NavDropdown({
 // ── Header ───────────────────────────────────────────────────────────────────
 export function Header() {
   const { pathname } = useLocation()
-  const { user, isAuthenticated, login, isLoading } = useAuth()
+  const { user, token, isAuthenticated, login, isLoading } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { data: gamification } = useQuery<{
+    total_xp: number
+    level: number
+    current_streak: number
+  }>({
+    queryKey: ['gamification', token],
+    queryFn: () =>
+      fetch('/api/v1/users/me/gamification', {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(response => response.json()),
+    enabled: !!token,
+    staleTime: 60_000,
+  })
 
   // Current page label for breadcrumb hint
   const currentItem = ALL_ITEMS.find(i => i.href === pathname)
@@ -335,6 +349,19 @@ export function Header() {
             {/* Auth - desktop version */}
             {!isLoading && (
               isAuthenticated && user ? (
+                <>
+                {gamification && (
+                  <Link to="/profile" className="hide-on-mobile" style={{
+                    display: 'flex', alignItems: 'center', gap: 7, textDecoration: 'none',
+                    padding: '5px 9px', borderRadius: 99, background: 'var(--accent-dim)',
+                    border: '1px solid color-mix(in srgb, var(--accent) 28%, transparent)',
+                    color: 'var(--accent)', fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap',
+                  }}>
+                    <span>⚡ {gamification.total_xp} XP</span>
+                    <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Lv.{gamification.level}</span>
+                    {gamification.current_streak > 0 && <span>🔥 {gamification.current_streak}</span>}
+                  </Link>
+                )}
                 <Link to="/profile" className="hide-on-mobile" style={{
                   display: 'flex', alignItems: 'center', gap: 7, textDecoration: 'none',
                   padding: '4px 10px 4px 4px', borderRadius: 99,
@@ -357,6 +384,7 @@ export function Header() {
                     {user.name ?? user.login}
                   </span>
                 </Link>
+                </>
               ) : (
                 <button onClick={login} className="hide-on-mobile" style={{
                   display: 'flex', alignItems: 'center', gap: 6,

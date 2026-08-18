@@ -18,6 +18,11 @@ interface TrainerMeta {
   comingSoon?: boolean
 }
 
+interface ProgressEntry {
+  skill: string
+  completed: boolean
+}
+
 const TRAINERS: TrainerMeta[] = [
   { moduleId: 'Python', title: 'Python', icon: '🐍', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 3, description: 'Основы синтаксиса, типы данных, list comprehensions', category: 'classic' },
   { moduleId: 'PyTorch', title: 'PyTorch', icon: '🔥', difficulty: 'Intermediate', estimatedMinutes: 45, totalExercises: 3, description: 'Тензоры, autograd, построение нейросетей', category: 'classic' },
@@ -47,7 +52,7 @@ export function Trainers() {
   const { token } = useAuth()
   const [catalogMode, setCatalogMode] = useState<'classic' | 'ai-native'>('classic')
 
-  const { data: progressData } = useQuery<{ module: string; exercises_completed: string[] }[]>({
+  const { data: progressData } = useQuery<ProgressEntry[]>({
     queryKey: ['user-progress', token],
     queryFn: () =>
       fetch(`${API}/users/me/progress`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
@@ -58,7 +63,9 @@ export function Trainers() {
   const progressMap = useMemo(() => {
     const map = new Map<string, number>()
     for (const p of progressData ?? []) {
-      map.set(p.module, p.exercises_completed.length)
+      if (p.completed) {
+        map.set(p.skill, (map.get(p.skill) ?? 0) + 1)
+      }
     }
     return map
   }, [progressData])

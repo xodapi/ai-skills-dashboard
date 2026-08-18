@@ -32,6 +32,11 @@ interface TrainingModule {
   exercises: Exercise[]
 }
 
+interface CompletionResponse {
+  xp_earned: number
+  new_badges: Array<{ title: string }>
+}
+
 // Simple markdown parser
 function parseMarkdown(text: string): string {
   return text
@@ -56,16 +61,33 @@ export default function Trainer() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [rewardMessage, setRewardMessage] = useState<string | null>(null)
 
   // Progress tracking mutation
   const progressMutation = useMutation({
-    mutationFn: (exerciseId: string) =>
+    mutationFn: (moduleIndex: number): Promise<CompletionResponse> =>
       fetch(`${API}/users/me/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
-        body: JSON.stringify({ module: skill, exercise_id: exerciseId }),
-      }).then(r => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['user-progress'] }),
+        body: JSON.stringify({
+          skill,
+          module_index: moduleIndex,
+          completed: true,
+          time_spent_seconds: elapsedSeconds,
+        }),
+      }).then(async response => {
+        if (!response.ok) throw new Error('Не удалось сохранить прогресс')
+        return response.json()
+      }),
+    onSuccess: data => {
+      qc.invalidateQueries({ queryKey: ['user-progress'] })
+      qc.invalidateQueries({ queryKey: ['gamification'] })
+      qc.invalidateQueries({ queryKey: ['learning-activity'] })
+      if (data.xp_earned > 0) {
+        const badges = data.new_badges.map(badge => ` · 🏆 ${badge.title}`).join('')
+        setRewardMessage(`+${data.xp_earned} XP${badges}`)
+      }
+    },
   })
 
   // Fetch module from API
@@ -169,6 +191,16 @@ export default function Trainer() {
         <p style={{ color: 'var(--text-2)', fontSize: 14 }}>
           Реальные задания из вакансий + интерактивные упражнения
         </p>
+        {rewardMessage && (
+          <div role="status" style={{
+            marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '9px 14px', borderRadius: 999, color: '#34D399',
+            background: 'rgba(16, 185, 129, .12)', border: '1px solid rgba(16, 185, 129, .3)',
+            fontSize: 13, fontWeight: 800,
+          }}>
+            ✨ {rewardMessage}
+          </div>
+        )}
       </div>
 
       {/* Tab Navigation */}
@@ -467,7 +499,7 @@ export default function Trainer() {
                   onClick={() => {
                     // Track progress if authenticated
                     if (token) {
-                      progressMutation.mutate(`ex-${currentExercise}`)
+                      progressMutation.mutate(currentExercise)
                     }
                     setCurrentExercise(currentExercise + 1)
                   }}
@@ -491,9 +523,10 @@ export default function Trainer() {
                   onClick={() => {
                     // Track final exercise
                     if (token) {
-                      progressMutation.mutate(`ex-${currentExercise}`)
+                      progressMutation.mutate(currentExercise)
                     }
                   }}
+                  disabled={progressMutation.isPending}
                   style={{
                     padding: '12px 24px',
                     background: 'linear-gradient(135deg, #10B981, #059669)',
@@ -506,7 +539,7 @@ export default function Trainer() {
                     marginRight: 12,
                   }}
                 >
-                  ✓ Завершить модуль
+                  {progressMutation.isPending ? 'Сохранение…' : '✓ Завершить упражнение'}
                 </button>
               )}
 
@@ -525,7 +558,7 @@ export default function Trainer() {
                     display: 'inline-block'
                   }}
                 >
-                  🎉 Завершить модуль
+                  🎓 К каталогу
                 </Link>
               )}
             </div>

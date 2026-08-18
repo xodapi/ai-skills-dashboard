@@ -5,10 +5,31 @@ import { useAuth } from '@/context/AuthContext'
 
 const API = '/api/v1'
 
-interface SkillEntry { skill: string; level: number; source: string; updated_at: string }
-interface ProgressEntry { module_name: string; completed_exercises: number; total_exercises: number; last_activity: string }
+interface SkillEntry {
+  skill_id: number
+  skill_name: string
+  category: string | null
+  proficiency_level: number
+  created_at: string
+}
+interface ProgressEntry {
+  id: number
+  skill: string
+  module_index: number
+  completed: boolean
+  updated_at: string
+}
 interface BookmarkEntry { skill: string; note: string | null; created_at: string }
-interface UserStats { total_skills: number; avg_skill_level: number; completed_modules: number; total_exercises_done: number; bookmarks_count: number; days_active: number }
+interface GamificationSummary {
+  total_xp: number
+  level: number
+  xp_in_current_level: number
+  xp_to_next_level: number
+  current_streak: number
+  longest_streak: number
+  badges: Array<{ key: string; title: string; unlocked_at: string }>
+}
+interface ActivityDay { date: string; completions: number; xp_earned: number }
 
 function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}` }
@@ -60,10 +81,17 @@ export function Profile() {
     enabled: !!token,
   })
 
-  const { data: stats } = useQuery<UserStats>({
-    queryKey: ['user-stats', token],
+  const { data: gamification } = useQuery<GamificationSummary>({
+    queryKey: ['gamification', token],
     queryFn: () =>
-      fetch(`${API}/users/me/stats`, { headers: authHeaders(token!) }).then(r => r.json()),
+      fetch(`${API}/users/me/gamification`, { headers: authHeaders(token!) }).then(r => r.json()),
+    enabled: !!token,
+  })
+
+  const { data: activity } = useQuery<ActivityDay[]>({
+    queryKey: ['learning-activity', token],
+    queryFn: () =>
+      fetch(`${API}/users/me/activity?days=91`, { headers: authHeaders(token!) }).then(r => r.json()),
     enabled: !!token,
   })
 
@@ -78,11 +106,18 @@ export function Profile() {
   if (!user) return null
 
   const STAT_ITEMS = [
-    { label: 'Навыков', value: stats?.total_skills ?? (skills?.length ?? 0), icon: '⬡' },
-    { label: 'Модулей', value: stats?.completed_modules ?? 0, icon: '🎯' },
-    { label: 'Упражнений', value: stats?.total_exercises_done ?? 0, icon: '✓' },
-    { label: 'Дней активности', value: stats?.days_active ?? 0, icon: '🔥' },
+    { label: 'Уровень', value: gamification?.level ?? 1, icon: '⚡' },
+    { label: 'Всего XP', value: gamification?.total_xp ?? 0, icon: '✨' },
+    { label: 'Дней подряд', value: gamification?.current_streak ?? 0, icon: '🔥' },
+    { label: 'Достижений', value: gamification?.badges.length ?? 0, icon: '🏆' },
   ]
+  const activityByDate = new Map((activity ?? []).map(day => [day.date, day]))
+  const heatmapDays = Array.from({ length: 91 }, (_, index) => {
+    const day = new Date()
+    day.setDate(day.getDate() - (90 - index))
+    const dateKey = day.toISOString().slice(0, 10)
+    return { dateKey, day: activityByDate.get(dateKey) }
+  })
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -147,6 +182,78 @@ export function Profile() {
         ))}
       </div>
 
+      {/* XP, badges and activity */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 20, alignItems: 'stretch' }}>
+        <div className="glass" style={{ padding: '20px 22px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline', marginBottom: 14 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              Прогресс уровня
+            </p>
+            <span style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 800 }}>
+              Уровень {gamification?.level ?? 1}
+            </span>
+          </div>
+          <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', background: 'var(--surface-4)' }}>
+            <div style={{
+              height: '100%',
+              width: `${gamification?.xp_in_current_level ?? 0}%`,
+              borderRadius: 999,
+              background: 'linear-gradient(90deg, #22D3EE, #818CF8)',
+              transition: 'width .4s ease',
+            }} />
+          </div>
+          <p style={{ marginTop: 9, color: 'var(--text-3)', fontSize: 12 }}>
+            {gamification?.xp_in_current_level ?? 0} XP в текущем уровне · ещё {gamification?.xp_to_next_level ?? 100} XP до следующего
+          </p>
+
+          <div style={{ borderTop: '1px solid var(--border)', marginTop: 18, paddingTop: 16 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>
+              Достижения
+            </p>
+            {(gamification?.badges.length ?? 0) === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.5 }}>
+                Завершите первое упражнение, чтобы получить достижение и XP.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {gamification?.badges.map(badge => (
+                  <span key={badge.key} title={`Получено ${timeAgo(badge.unlocked_at)}`} style={{
+                    padding: '7px 10px', borderRadius: 999, background: 'rgba(245,158,11,.1)',
+                    border: '1px solid rgba(245,158,11,.25)', color: '#FBBF24', fontSize: 12, fontWeight: 700,
+                  }}>
+                    🏆 {badge.title}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="glass" style={{ padding: '20px 22px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              Активность · 13 недель
+            </p>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>меньше ← → больше</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(13, 1fr)', gap: 5 }}>
+            {heatmapDays.map(({ dateKey, day }) => {
+              const intensity = day ? Math.min(day.completions, 4) : 0
+              const color = ['var(--surface-4)', 'rgba(34,211,238,.26)', 'rgba(34,211,238,.48)', 'rgba(16,185,129,.68)', '#10B981'][intensity]
+              return (
+                <span key={dateKey} title={day ? `${dateKey}: ${day.completions} упражн., +${day.xp_earned} XP` : `${dateKey}: нет активности`} style={{
+                  aspectRatio: '1', borderRadius: 4, background: color, minWidth: 0,
+                  border: intensity ? '1px solid rgba(34,211,238,.16)' : '1px solid transparent',
+                }} />
+              )
+            })}
+          </div>
+          <p style={{ marginTop: 12, color: 'var(--text-3)', fontSize: 12, lineHeight: 1.5 }}>
+            Лучшая серия: {gamification?.longest_streak ?? 0} дн. Поддерживайте темп, завершая упражнения ежедневно.
+          </p>
+        </div>
+      </div>
+
       {/* Skills + Progress side by side */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20, alignItems: 'start' }}>
 
@@ -172,14 +279,15 @@ export function Profile() {
           )}
 
           {skills?.slice(0, 12).map(s => {
-            const lbl = levelLabel(s.level)
+            const level = s.proficiency_level * 20
+            const lbl = levelLabel(level)
             return (
-              <div key={s.skill} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <div key={s.skill_id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {s.skill}
+                  {s.skill_name}
                 </span>
                 <div style={{ width: 80, height: 6, background: 'var(--surface-4)', borderRadius: 99, flexShrink: 0 }}>
-                  <div style={{ height: '100%', borderRadius: 99, width: `${s.level}%`, background: lbl.color, transition: 'width .4s' }} />
+                  <div style={{ height: '100%', borderRadius: 99, width: `${level}%`, background: lbl.color, transition: 'width .4s' }} />
                 </div>
                 <span style={{ fontSize: 10, color: lbl.color, fontWeight: 700, flexShrink: 0, width: 70, textAlign: 'right' }}>
                   {lbl.text}
@@ -217,13 +325,13 @@ export function Profile() {
           )}
 
           {progress?.map(p => {
-            const pct = p.total_exercises > 0 ? Math.round((p.completed_exercises / p.total_exercises) * 100) : 0
+            const pct = p.completed ? 100 : 0
             return (
-              <div key={p.module_name} style={{ marginBottom: 12 }}>
+              <div key={p.id} style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <Link to={`/trainer/${encodeURIComponent(p.module_name)}`}
+                  <Link to={`/trainer/${encodeURIComponent(p.skill)}`}
                     style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', textDecoration: 'none' }}>
-                    {p.module_name}
+                    {p.skill} · упражнение {p.module_index + 1}
                   </Link>
                   <span style={{ fontSize: 11, fontWeight: 700, color: pct === 100 ? '#10B981' : 'var(--accent)' }}>
                     {pct}%
@@ -235,7 +343,7 @@ export function Profile() {
                     transition: 'width .4s' }} />
                 </div>
                 <p style={{ fontSize: 10, color: 'var(--text-3)' }}>
-                  {p.completed_exercises}/{p.total_exercises} упражнений · {timeAgo(p.last_activity)}
+                  {p.completed ? 'Завершено' : 'В процессе'} · {timeAgo(p.updated_at)}
                 </p>
               </div>
             )
