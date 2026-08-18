@@ -2324,4 +2324,125 @@ output "bucket_name" {
             }
         ]
     },
+
+    # ===== AI-Native Engineering =====
+    "AI Native": {
+        "title": "AI-Native Engineering",
+        "icon": "🤖",
+        "level": "advanced",
+        "theory": """
+**AI-native engineering** — это управление качеством, архитектурой и результатом,
+когда AI-агенты выполняют значительную часть реализации.
+
+**Ключевые навыки:**
+- проверять AI-generated code, особенно границы безопасности и доверия;
+- декомпозировать работу между агентами и принимать результаты;
+- удерживать архитектуру простой и соответствующей требованиям;
+- расследовать инциденты в кодовой базе, созданной с помощью AI;
+- превращать запрос продукта в ограниченный, проверяемый MVP-план.
+
+AI не заменяет инженерное суждение: итоговая ответственность за безопасность,
+стоимость, эксплуатацию и пользовательский результат остаётся у человека.
+""",
+        "exercises": [
+            {
+                "type": "code",
+                "title": "AI Code Review: OAuth Security",
+                "description": "AI-агент сгенерировал callback для OAuth. Проведите ревью: найдите минимум пять проблем и предложите безопасные исправления. Не доверяйте коду только потому, что он выглядит завершённым.",
+                "starter_code": """# AI-generated draft — review before production
+@app.get("/auth/callback")
+async def callback(code: str, state: str | None = None):
+    access_token = await exchange_code(code)
+    user = await github.get_user(access_token)
+    db_user = await db.get_or_create(email=user["email"])
+    token = jwt.encode({"sub": db_user.id}, SECRET_KEY, algorithm="HS256")
+    response = RedirectResponse(f"https://app.example.com/profile?token={token}")
+    response.set_cookie("session", access_token)
+    return response
+""",
+                "solution": """Review checklist:
+1. Validate state against a server-generated, short-lived value.
+2. Never put an access or JWT token in a URL.
+3. Do not store the provider access token in a client-readable cookie.
+4. Use an HttpOnly, Secure, SameSite cookie for the session.
+5. Validate the OAuth response and identity before creating a user.
+6. Use an explicit JWT algorithm allow-list and expiry.
+7. Avoid account linking by unverified or ambiguous email alone.""",
+                "test_cases": [
+                    {"input": "security review", "expected": "At least five concrete findings with remediations"},
+                ],
+                "ai_native": True,
+                "badge": "Security Hawk",
+                "xp": 50,
+            },
+            {
+                "type": "quiz",
+                "title": "Orchestrate 3 agents",
+                "question": "Какой порядок лучше всего снижает риск при работе трёх AI-агентов над MVP?",
+                "options": [
+                    "Параллельно попросить всех агентов сразу написать весь продукт и выбрать самый длинный результат",
+                    "Сначала зафиксировать контракт и критерии приёмки, затем распределить задачи, после чего провести интеграцию и независимую проверку",
+                    "Передать одного агента другому без общего контекста и принять последний ответ",
+                    "Запретить тестирование, чтобы не замедлять AI-разработку"
+                ],
+                "correct": 1,
+                "explanation": "Контракт, границы ответственности и независимая проверка превращают набор агентов в управляемый процесс, а не в конкуренцию за самый большой diff.",
+                "ai_native": True,
+                "badge": "Agent Whisperer",
+                "xp": 50,
+            },
+            {
+                "type": "terminal",
+                "title": "Production Incident: AI-generated latency",
+                "description": "После релиза endpoint стал отвечать 5 секунд. Составьте последовательность диагностики, найдите вероятное N+1 и определите безопасный rollback или hotfix.",
+                "command": "curl -w 'time_total=%{time_total}\\n' -sS https://api.example.com/recommendations && docker compose logs --since=10m api",
+                "expected_output": "Гипотеза → измерение → минимальное исправление → проверка latency/error rate → postmortem",
+                "time_limit_seconds": 900,
+                "ai_native": True,
+                "badge": "5-Minute Hero",
+                "xp": 50,
+            },
+            {
+                "type": "code",
+                "title": "Architecture Review: 15 microservices",
+                "description": "AI предложил 15 микросервисов для MVP из двух команд и одной базы данных. Перепишите план так, чтобы сохранить требования и уменьшить операционную сложность.",
+                "starter_code": """# AI proposal
+services = [
+    "auth", "profiles", "skills", "recommendations", "search",
+    "notifications", "billing", "audit", "analytics", "exports",
+    "scheduler", "gateway", "feature_flags", "moderation", "email"
+]
+# Requirements: launch in 2 weeks, 2 engineers, one PostgreSQL instance.
+# Task: propose a smaller deployable architecture and explain trade-offs.
+""",
+                "solution": """A reasonable MVP:
+- one modular FastAPI service with clear internal boundaries;
+- one worker process for async jobs;
+- PostgreSQL and Redis only where justified;
+- external provider for email/identity if available;
+- explicit seams for extracting a service after scale or ownership requires it.
+
+Measure operational load and domain boundaries before splitting services.""",
+                "ai_native": True,
+                "badge": "System Designer",
+                "xp": 50,
+            },
+            {
+                "type": "quiz",
+                "title": "Scope MVP with AI leverage",
+                "question": "Что должно быть зафиксировано до того, как AI-агенты начнут реализацию MVP?",
+                "options": [
+                    "Только список библиотек и желаемый объём сгенерированного кода",
+                    "Пользовательская проблема, критерии успеха, ограничения, риски, границы MVP и способ проверки результата",
+                    "Максимально широкий backlog без приоритета, чтобы агенты выбрали сами",
+                    "Только визуальный макет без API-контрактов и критериев приёмки"
+                ],
+                "correct": 1,
+                "explanation": "AI ускоряет реализацию, но не заменяет продуктовые решения. Границы и критерии позволяют оценить ценность и не разогнать scope.",
+                "ai_native": True,
+                "badge": "Product Thinker",
+                "xp": 50,
+            },
+        ],
+    },
 }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
@@ -7,32 +7,34 @@ const API = '/api/v1'
 
 // ── Trainer catalog ────────────────────────────────────────────────────────────
 interface TrainerMeta {
-  slug: string
+  moduleId: string
   title: string
   icon: string
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
   estimatedMinutes: number
   totalExercises: number
   description: string
+  category: 'classic' | 'ai-native'
   comingSoon?: boolean
 }
 
 const TRAINERS: TrainerMeta[] = [
-  { slug: 'python', title: 'Python', icon: '🐍', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 8, description: 'Основы синтаксиса, типы данных, list comprehensions' },
-  { slug: 'pytorch', title: 'PyTorch', icon: '🔥', difficulty: 'Intermediate', estimatedMinutes: 45, totalExercises: 10, description: 'Тензоры, autograd, построение нейросетей' },
-  { slug: 'docker', title: 'Docker', icon: '🐳', difficulty: 'Beginner', estimatedMinutes: 35, totalExercises: 9, description: 'Контейнеризация, Dockerfile, docker-compose' },
-  { slug: 'kubernetes', title: 'Kubernetes', icon: '☸️', difficulty: 'Advanced', estimatedMinutes: 50, totalExercises: 12, description: 'Pods, Deployments, Services, масштабирование' },
-  { slug: 'langchain', title: 'LangChain', icon: '🦜', difficulty: 'Intermediate', estimatedMinutes: 40, totalExercises: 10, description: 'Цепочки промптов, агенты, RAG-системы' },
-  { slug: 'sql', title: 'SQL', icon: '🗄️', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 8, description: 'SELECT, JOIN, GROUP BY, подзапросы' },
-  { slug: 'mlflow', title: 'MLflow', icon: '📊', difficulty: 'Intermediate', estimatedMinutes: 35, totalExercises: 9, description: 'Tracking экспериментов, модели, registry' },
-  { slug: 'scikit-learn', title: 'scikit-learn', icon: '🤖', difficulty: 'Intermediate', estimatedMinutes: 40, totalExercises: 10, description: 'Классификация, регрессия, пайплайны' },
-  { slug: 'computer vision', title: 'Computer Vision', icon: '👁️', difficulty: 'Advanced', estimatedMinutes: 45, totalExercises: 11, description: 'CNN, детекция объектов, сегментация' },
-  { slug: 'transformers', title: 'Transformers', icon: '🤗', difficulty: 'Advanced', estimatedMinutes: 50, totalExercises: 12, description: 'BERT, GPT, fine-tuning, токенизация' },
-  { slug: 'pandas', title: 'Pandas', icon: '🐼', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 8, description: 'DataFrame, фильтрация, группировки, join' },
-  { slug: 'fastapi', title: 'FastAPI', icon: '⚡', difficulty: 'Intermediate', estimatedMinutes: 35, totalExercises: 9, description: 'REST API, валидация, async endpoints' },
-  { slug: 'opencv', title: 'OpenCV', icon: '📷', difficulty: 'Intermediate', estimatedMinutes: 40, totalExercises: 10, description: 'Обработка изображений, фильтры, детекция' },
-  { slug: 'airflow', title: 'Airflow', icon: '🌀', difficulty: 'Advanced', estimatedMinutes: 45, totalExercises: 11, description: 'DAG, операторы, расписания, мониторинг' },
-  { slug: 'terraform', title: 'Terraform', icon: '🏗️', difficulty: 'Advanced', estimatedMinutes: 40, totalExercises: 10, description: 'IaC, провайдеры, модули, state' },
+  { moduleId: 'Python', title: 'Python', icon: '🐍', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 3, description: 'Основы синтаксиса, типы данных, list comprehensions', category: 'classic' },
+  { moduleId: 'PyTorch', title: 'PyTorch', icon: '🔥', difficulty: 'Intermediate', estimatedMinutes: 45, totalExercises: 3, description: 'Тензоры, autograd, построение нейросетей', category: 'classic' },
+  { moduleId: 'Docker', title: 'Docker', icon: '🐳', difficulty: 'Beginner', estimatedMinutes: 35, totalExercises: 3, description: 'Контейнеризация, Dockerfile, docker-compose', category: 'classic' },
+  { moduleId: 'Kubernetes', title: 'Kubernetes', icon: '☸️', difficulty: 'Advanced', estimatedMinutes: 50, totalExercises: 3, description: 'Pods, Deployments, Services, масштабирование', category: 'classic' },
+  { moduleId: 'LangChain', title: 'LangChain', icon: '🦜', difficulty: 'Intermediate', estimatedMinutes: 40, totalExercises: 3, description: 'Цепочки промптов, агенты, RAG-системы', category: 'classic' },
+  { moduleId: 'SQL', title: 'SQL', icon: '🗄️', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 3, description: 'SELECT, JOIN, GROUP BY, подзапросы', category: 'classic' },
+  { moduleId: 'MLflow', title: 'MLflow', icon: '📊', difficulty: 'Intermediate', estimatedMinutes: 35, totalExercises: 3, description: 'Tracking экспериментов, модели, registry', category: 'classic' },
+  { moduleId: 'scikit-learn', title: 'scikit-learn', icon: '🤖', difficulty: 'Intermediate', estimatedMinutes: 40, totalExercises: 3, description: 'Классификация, регрессия, пайплайны', category: 'classic' },
+  { moduleId: 'Computer Vision', title: 'Computer Vision', icon: '👁️', difficulty: 'Advanced', estimatedMinutes: 45, totalExercises: 3, description: 'CNN, детекция объектов, сегментация', category: 'classic' },
+  { moduleId: 'Transformers', title: 'Transformers', icon: '🤗', difficulty: 'Advanced', estimatedMinutes: 50, totalExercises: 3, description: 'BERT, GPT, fine-tuning, токенизация', category: 'classic' },
+  { moduleId: 'Pandas', title: 'Pandas', icon: '🐼', difficulty: 'Beginner', estimatedMinutes: 30, totalExercises: 3, description: 'DataFrame, фильтрация, группировки, join', category: 'classic' },
+  { moduleId: 'FastAPI', title: 'FastAPI', icon: '⚡', difficulty: 'Intermediate', estimatedMinutes: 35, totalExercises: 3, description: 'REST API, валидация, async endpoints', category: 'classic' },
+  { moduleId: 'OpenCV', title: 'OpenCV', icon: '📷', difficulty: 'Intermediate', estimatedMinutes: 40, totalExercises: 3, description: 'Обработка изображений, фильтры, детекция', category: 'classic' },
+  { moduleId: 'Airflow', title: 'Airflow', icon: '🌀', difficulty: 'Advanced', estimatedMinutes: 45, totalExercises: 3, description: 'DAG, операторы, расписания, мониторинг', category: 'classic' },
+  { moduleId: 'Terraform', title: 'Terraform', icon: '🏗️', difficulty: 'Advanced', estimatedMinutes: 40, totalExercises: 3, description: 'IaC, провайдеры, модули, state', category: 'classic' },
+  { moduleId: 'AI Native', title: 'AI-Native Engineering', icon: '🤖', difficulty: 'Advanced', estimatedMinutes: 75, totalExercises: 5, description: 'Ревью AI-кода, orchestration, incident response, архитектура и MVP scope', category: 'ai-native' },
 ]
 
 const DIFFICULTY_COLOR: Record<string, string> = {
@@ -43,6 +45,7 @@ const DIFFICULTY_COLOR: Record<string, string> = {
 
 export function Trainers() {
   const { token } = useAuth()
+  const [catalogMode, setCatalogMode] = useState<'classic' | 'ai-native'>('classic')
 
   const { data: progressData } = useQuery<{ module: string; exercises_completed: string[] }[]>({
     queryKey: ['user-progress', token],
@@ -60,6 +63,8 @@ export function Trainers() {
     return map
   }, [progressData])
 
+  const visibleTrainers = TRAINERS.filter(trainer => trainer.category === catalogMode)
+
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
@@ -68,7 +73,7 @@ export function Trainers() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <span className="tag">Тренажёры</span>
           <span className="tag" style={{ background: 'rgba(34,211,238,.1)', color: 'var(--cyan)', borderColor: 'rgba(34,211,238,.25)' }}>
-            {TRAINERS.length} модулей
+            {visibleTrainers.length} модулей
           </span>
         </div>
         <h1 style={{
@@ -80,21 +85,45 @@ export function Trainers() {
           Каталог тренажёров
         </h1>
         <p style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>
-          Интерактивные модули с теорией и практическими упражнениями — от основ Python до продвинутых ML-инструментов.
+          Выберите классический трек или AI-native практику: оценку, проверку и управление работой AI-агентов.
         </p>
+      </section>
+
+      <section aria-label="Режим каталога" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {[
+          { value: 'classic' as const, label: '📚 Classic Mode' },
+          { value: 'ai-native' as const, label: '🤖 AI Mode' },
+        ].map(mode => {
+          const active = catalogMode === mode.value
+          return (
+            <button
+              key={mode.value}
+              onClick={() => setCatalogMode(mode.value)}
+              aria-pressed={active}
+              style={{
+                minHeight: 44, padding: '10px 16px', borderRadius: 999, cursor: 'pointer',
+                border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
+                background: active ? 'var(--accent-dim)' : 'var(--surface-3)',
+                color: active ? 'var(--accent)' : 'var(--text-2)', fontSize: 13, fontWeight: 800,
+              }}
+            >
+              {mode.label}
+            </button>
+          )
+        })}
       </section>
 
       {/* Trainer grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-        {TRAINERS.map(trainer => {
-          const completed = progressMap.get(trainer.slug) ?? 0
+        {visibleTrainers.map(trainer => {
+          const completed = progressMap.get(trainer.moduleId) ?? 0
           const progressPct = trainer.totalExercises > 0 ? Math.round((completed / trainer.totalExercises) * 100) : 0
           const diffColor = DIFFICULTY_COLOR[trainer.difficulty]
 
           return (
             <Link
-              key={trainer.slug}
-              to={trainer.comingSoon ? '#' : `/trainer/${encodeURIComponent(trainer.slug)}`}
+              key={trainer.moduleId}
+              to={trainer.comingSoon ? '#' : `/trainer/${encodeURIComponent(trainer.moduleId)}`}
               style={{
                 display: 'flex', flexDirection: 'column', gap: 12,
                 padding: '20px 22px', borderRadius: 12,
@@ -131,6 +160,14 @@ export function Trainers() {
                     }}>
                       {trainer.difficulty}
                     </span>
+                    {trainer.category === 'ai-native' && (
+                      <span style={{
+                        fontSize: 10, padding: '2px 7px', borderRadius: 99, fontWeight: 700,
+                        color: '#A78BFA', background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.25)',
+                      }}>
+                        AI Era
+                      </span>
+                    )}
                     <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
                       {trainer.estimatedMinutes} мин
                     </span>

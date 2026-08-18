@@ -18,6 +18,10 @@ interface Exercise {
   command?: string
   expected_output?: string
   test_cases?: Array<{ input: string; expected: string }>
+  ai_native?: boolean
+  badge?: string
+  xp?: number
+  time_limit_seconds?: number
 }
 
 interface TrainingModule {
@@ -51,6 +55,7 @@ export default function Trainer() {
   const [userCode, setUserCode] = useState('')
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [showSolution, setShowSolution] = useState(false)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   // Progress tracking mutation
   const progressMutation = useMutation({
@@ -71,7 +76,7 @@ export default function Trainer() {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(`/api/training/modules/${skill}`)
+        const response = await fetch(`${API}/training/modules/${encodeURIComponent(skill)}`)
         
         if (!response.ok) {
           throw new Error(`Module "${skill}" not found`)
@@ -96,8 +101,18 @@ export default function Trainer() {
       setUserCode(ex.starter_code || '')
       setShowSolution(false)
       setSelectedAnswer(null)
+      setElapsedSeconds(0)
     }
   }, [currentExercise, module])
+
+  useEffect(() => {
+    const limit = module?.exercises[currentExercise]?.time_limit_seconds
+    if (activeTab !== 'exercises' || !limit || showSolution || elapsedSeconds >= limit) return
+    const timer = window.setInterval(() => {
+      setElapsedSeconds(seconds => Math.min(seconds + 1, limit))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [activeTab, currentExercise, elapsedSeconds, module, showSolution])
 
   if (loading) {
     return (
@@ -242,10 +257,32 @@ export default function Trainer() {
                   {exercise.type === 'code' && '💻'}
                   {exercise.type === 'terminal' && '⚡'}
                 </span>
-                <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-1)' }}>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-1)', flex: 1 }}>
                   {exercise.title || exercise.question || `Задание ${currentExercise + 1}`}
                 </h3>
+                {exercise.ai_native && (
+                  <span style={{
+                    padding: '4px 9px', borderRadius: 999, color: '#A78BFA',
+                    background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.25)',
+                    fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap',
+                  }}>
+                    AI Era · +{exercise.xp ?? 0} XP
+                  </span>
+                )}
               </div>
+              {exercise.time_limit_seconds && (
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 12,
+                  padding: '7px 10px', borderRadius: 8,
+                  color: elapsedSeconds >= exercise.time_limit_seconds ? '#F43F5E' : 'var(--warning)',
+                  background: 'var(--surface-3)', border: '1px solid var(--border)',
+                  fontSize: 12, fontWeight: 800,
+                }}>
+                  ⏱ {Math.floor(Math.max(0, exercise.time_limit_seconds - elapsedSeconds) / 60)}:
+                  {String(Math.max(0, exercise.time_limit_seconds - elapsedSeconds) % 60).padStart(2, '0')}
+                  {elapsedSeconds >= exercise.time_limit_seconds ? ' · Время вышло' : ''}
+                </div>
+              )}
               {exercise.description && (
                 <p 
                   style={{ fontSize: 15, color: '#CBD5E1', lineHeight: 1.6 }}
