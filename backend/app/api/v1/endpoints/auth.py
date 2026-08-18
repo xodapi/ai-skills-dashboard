@@ -2,6 +2,10 @@
 Authentication API endpoints.
 """
 from datetime import datetime, timedelta
+import base64
+import hashlib
+import hmac
+import secrets
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -23,6 +27,46 @@ from app.core.config import settings
 
 
 router = APIRouter()
+OAUTH_STATE_MAX_AGE_SECONDS = 10 * 60
+
+
+def _create_oauth_state() -> str:
+    """Create a short-lived signed CSRF state token."""
+    timestamp = str(int(datetime.utcnow().timestamp()))
+    nonce = secrets.token_urlsafe(32)
+    payload = f"{timestamp}.{nonce}"
+    signature = hmac.new(
+        settings.SECRET_KEY.encode(),
+        payload.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    raw_state = f"{payload}.{signature}"
+    return base64.urlsafe_b64encode(raw_state.encode()).decode().rstrip("=")
+
+
+def _verify_oauth_state(state: Optional[str]) -> bool:
+    """Validate the OAuth state signature and ten-minute expiry."""
+    if not state:
+        return False
+    try:
+        padded = state + "=" * (-len(state) % 4)
+        raw_state = base64.urlsafe_b64decode(padded.encode()).decode()
+        timestamp, nonce, signature = raw_state.split(".", 2)
+        if not nonce or not timestamp.isdigit():
+            return False
+        payload = f"{timestamp}.{nonce}"
+        expected = hmac.new(
+            settings.SECRET_KEY.encode(),
+            payload.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        age = datetime.utcnow().timestamp() - int(timestamp)
+        return (
+            hmac.compare_digest(signature, expected)
+            and 0 <= age <= OAUTH_STATE_MAX_AGE_SECONDS
+        )
+    except (ValueError, UnicodeDecodeError, base64.binascii.Error):
+        return False
 
 
 @router.get("/github/authorize")
@@ -38,8 +82,7 @@ async def github_authorize(
     try:
         github_oauth = get_github_oauth()
         
-        # Generate state for CSRF protection (in production, store this in Redis)
-        state = "random_state_token"  # TODO: Generate and store properly
+        state = _create_oauth_state()
         
         auth_url = github_oauth.get_authorization_url(state=state)
         
@@ -73,6 +116,11 @@ async def github_callback_get(
     Returns:
         JWT token and user information
     """
+    if not _verify_oauth_state(state):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired OAuth state",
+        )
     return await _process_github_callback(code, db)
 
 
@@ -91,6 +139,11 @@ async def github_callback_post(
     Returns:
         JWT token and user information
     """
+    if not _verify_oauth_state(callback_data.state):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired OAuth state",
+        )
     return await _process_github_callback(callback_data.code, db)
 
 

@@ -4,6 +4,7 @@ GitHub OAuth authentication utilities.
 from typing import Optional, Dict, Any
 import httpx
 from fastapi import HTTPException, status
+from urllib.parse import urlencode
 
 from app.core.config import settings
 
@@ -49,7 +50,7 @@ class GitHubOAuth:
         if state:
             params["state"] = state
         
-        query_string = "&".join(f"{k}={v}" for k, v in params.items())
+        query_string = urlencode(params)
         return f"{self.AUTHORIZE_URL}?{query_string}"
     
     async def get_access_token(self, code: str) -> str:
