@@ -32,11 +32,10 @@ interface GamificationSummary {
 interface ActivityDay { date: string; completions: number; xp_earned: number }
 interface GitHubActivity {
   username: string
-  public_repos: number
-  repos_analyzed: number
-  total_commits: number
-  push_events: number
-  raw_languages: Record<string, number>
+  total_year: number
+  active_days_year: number
+  levels_91d: Array<{ date: string; level: number }>
+  refreshed_at: string
 }
 
 function authHeaders(token: string) {
@@ -106,12 +105,15 @@ export function Profile() {
   const { data: githubActivity, isFetching: isGitHubActivityLoading, isError: isGitHubActivityError } = useQuery<GitHubActivity>({
     queryKey: ['github-activity', user?.login],
     queryFn: async () => {
-      const response = await fetch(`${API}/github/skills?username=${encodeURIComponent(user!.login)}`)
+      const response = await fetch(`${API}/github/activity/${encodeURIComponent(user!.login)}`, {
+        cache: 'no-store',
+      })
       if (!response.ok) throw new Error('Не удалось загрузить GitHub activity')
       return response.json()
     },
     enabled: !!user?.login,
-    staleTime: 10 * 60_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
     retry: false,
   })
 
@@ -210,7 +212,7 @@ export function Profile() {
               GitHub activity
             </p>
             <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-              Публичные события GitHub, обновляются при открытии профиля
+              Публичный contribution calendar, обновляется при каждом открытии профиля
             </p>
           </div>
           <Link to="/github-import" style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
@@ -225,12 +227,10 @@ export function Profile() {
           </p>
         ) : githubActivity ? (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(125px, 1fr))', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
               {[
-                ['Репозитории', githubActivity.public_repos, 'var(--accent)'],
-                ['Проанализировано', githubActivity.repos_analyzed, '#A78BFA'],
-                ...(githubActivity.total_commits > 0 ? [['Коммиты', githubActivity.total_commits, '#FBBF24']] : []),
-                ['Push events', githubActivity.push_events, '#34D399'],
+                ['Contributions', githubActivity.total_year.toLocaleString('ru-RU'), 'var(--accent)'],
+                ['Активных дней', githubActivity.active_days_year, '#34D399'],
               ].map(([label, value, color]) => (
                 <div key={label as string} style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
                   <p style={{ fontSize: 22, fontWeight: 900, color: color as string }}>{value}</p>
@@ -238,15 +238,18 @@ export function Profile() {
                 </div>
               ))}
             </div>
-            {Object.keys(githubActivity.raw_languages).length > 0 && (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-                {Object.entries(githubActivity.raw_languages).slice(0, 6).map(([language, share]) => (
-                  <span key={language} style={{ padding: '4px 9px', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--text-2)', fontSize: 11 }}>
-                    {language} <strong style={{ color: 'var(--accent)' }}>{share}%</strong>
-                  </span>
-                ))}
-              </div>
-            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(13, minmax(0, 1fr))', gap: 4, marginTop: 16 }}>
+              {githubActivity.levels_91d.map(day => (
+                <span key={day.date} title={`${day.date}: уровень активности ${day.level}`} style={{
+                  aspectRatio: '1', minWidth: 0, borderRadius: 3,
+                  background: ['var(--surface-4)', 'rgba(34,211,238,.26)', 'rgba(34,211,238,.48)', 'rgba(16,185,129,.68)', '#10B981'][day.level],
+                  border: day.level ? '1px solid rgba(34,211,238,.16)' : '1px solid transparent',
+                }} />
+              ))}
+            </div>
+            <p style={{ color: 'var(--text-3)', fontSize: 11, marginTop: 10 }}>
+              Последние 13 недель · обновлено {timeAgo(githubActivity.refreshed_at)}
+            </p>
           </>
         ) : null}
       </div>

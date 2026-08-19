@@ -3,8 +3,9 @@ API endpoints with demo data.
 IMPORTANT: specific sub-paths must be declared BEFORE parameterized routes.
 """
 from typing import Optional, List
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from datetime import datetime
+import re
 
 from app.demo_data import (
     generate_demo_vacancies,
@@ -442,6 +443,71 @@ async def get_skills_forecast(
 # ---------------------------------------------------------------------------
 # GitHub skills import
 # ---------------------------------------------------------------------------
+
+@router.get("/github/activity/{username}")
+async def get_github_activity(username: str) -> dict:
+    """Fetch a public GitHub contribution calendar on every profile visit."""
+    import httpx
+
+    normalized_username = username.strip().lstrip("@")
+    if not normalized_username:
+        raise HTTPException(status_code=422, detail="GitHub username is required")
+
+    try:
+        async with httpx.AsyncClient(timeout=12) as client:
+            response = await client.get(
+                f"https://github.com/users/{normalized_username}/contributions",
+                headers={
+                    "Accept": "text/html",
+                    "User-Agent": "AI-Skills-Dashboard/1.0 (+https://ai-skills.syntog.ru)",
+                },
+            )
+        if response.status_code == 404:
+            raise HTTPException(
+                status_code=404,
+                detail=f"GitHub user '{normalized_username}' not found",
+            )
+        response.raise_for_status()
+
+        html = response.text
+        total_match = re.search(
+            r"([0-9,]+)\s+contributions\s+in\s+the\s+last\s+year",
+            html,
+        )
+        if not total_match:
+            total_match = re.search(r"([0-9,]+)\s+contributions", html)
+        if not total_match:
+            raise ValueError("GitHub contribution total was not found")
+
+        levels_by_date = {
+            activity_date: int(level)
+            for activity_date, level in re.findall(
+                r'data-date="([0-9-]+)"[^>]*data-level="(\d+)"',
+                html,
+            )
+        }
+        days = [
+            {"date": activity_date, "level": level}
+            for activity_date, level in sorted(levels_by_date.items())
+        ]
+        if not days:
+            raise ValueError("GitHub contribution calendar was not found")
+
+        return {
+            "username": normalized_username,
+            "total_year": int(total_match.group(1).replace(",", "")),
+            "active_days_year": sum(day["level"] > 0 for day in days),
+            "levels_91d": days[-91:],
+            "refreshed_at": datetime.utcnow().isoformat(),
+        }
+    except HTTPException:
+        raise
+    except (httpx.HTTPError, ValueError) as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"GitHub activity unavailable: {error}",
+        ) from error
+
 
 @router.get("/github/skills")
 async def import_github_skills(
