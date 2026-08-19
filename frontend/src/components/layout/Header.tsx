@@ -84,7 +84,8 @@ function MobileMenu({ pathname, onClose, isAdmin }: { pathname: string; onClose:
         ref={ref}
         style={{
           position: 'fixed', top: 0, right: 0, bottom: 0,
-          width: 'min(320px, 85vw)',
+          width: '100vw',
+          maxWidth: 640,
           background: 'var(--surface-1)',
           borderLeft: '1px solid var(--border)',
           zIndex: 1000,
@@ -121,9 +122,9 @@ function MobileMenu({ pathname, onClose, isAdmin }: { pathname: string; onClose:
         </div>
 
         {/* Navigation groups */}
-        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ padding: '14px 16px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
           {NAV_GROUPS.map(group => (
-            <div key={group.label} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div key={group.label} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               <div style={{
                 fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
                 letterSpacing: '.08em', color: 'var(--text-3)',
@@ -132,7 +133,7 @@ function MobileMenu({ pathname, onClose, isAdmin }: { pathname: string; onClose:
                 <span>{group.icon}</span>
                 {group.label}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 5 }}>
                 {group.items.map(item => {
                   const active = pathname === item.href
                   return (
@@ -142,18 +143,18 @@ function MobileMenu({ pathname, onClose, isAdmin }: { pathname: string; onClose:
                       onClick={onClose}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 14px', borderRadius: 8, textDecoration: 'none',
+                        padding: '8px 10px', borderRadius: 8, textDecoration: 'none',
                         color: active ? 'var(--accent)' : 'var(--text-2)',
                         background: active ? 'var(--accent-dim)' : 'transparent',
                         border: active ? '1px solid color-mix(in srgb, var(--accent) 25%, transparent)' : '1px solid transparent',
-                        fontSize: 14, fontWeight: active ? 600 : 400,
+                        fontSize: 12, fontWeight: active ? 600 : 400,
                         transition: 'all .15s',
-                        minHeight: 44, // Touch-friendly
+                        minHeight: 38,
                       }}
                       onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--surface-4)' }}
                       onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
                     >
-                      <span style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{item.icon}</span>
+                      <span style={{ fontSize: 14, width: 18, textAlign: 'center' }}>{item.icon}</span>
                       <span style={{ flex: 1 }}>{item.name}</span>
                       {active && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />}
                     </Link>
@@ -163,7 +164,7 @@ function MobileMenu({ pathname, onClose, isAdmin }: { pathname: string; onClose:
             </div>
           ))}
           {isAdmin && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               <div style={{
                 fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
                 letterSpacing: '.08em', color: '#FBBF24', display: 'flex', alignItems: 'center', gap: 6,
@@ -171,10 +172,10 @@ function MobileMenu({ pathname, onClose, isAdmin }: { pathname: string; onClose:
                 <span>🔐</span> Администрирование
               </div>
               <Link to="/admin" onClick={onClose} style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8,
+                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8,
                 textDecoration: 'none', color: pathname.startsWith('/admin') ? '#FBBF24' : 'var(--text-2)',
                 background: pathname.startsWith('/admin') ? 'rgba(245,158,11,.1)' : 'transparent',
-                border: '1px solid rgba(245,158,11,.22)', fontSize: 14, minHeight: 44,
+                border: '1px solid rgba(245,158,11,.22)', fontSize: 12, minHeight: 38,
               }}>
                 <span>▣</span><span>Панель администратора</span>
               </Link>

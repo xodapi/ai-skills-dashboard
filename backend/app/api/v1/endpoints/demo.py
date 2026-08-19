@@ -599,8 +599,10 @@ async def import_github_skills(
         for event in events:
             if event.get("type") == "PushEvent":
                 push_events += 1
-                # Each PushEvent can contain multiple commits
-                commits_in_push = len(event.get("payload", {}).get("commits", []))
+                # GitHub may truncate the commits array in public event payloads.
+                # `size` preserves the number of commits represented by the push.
+                payload = event.get("payload", {})
+                commits_in_push = payload.get("size") or len(payload.get("commits", []))
                 total_commits += commits_in_push
 
         # Language percentage breakdown

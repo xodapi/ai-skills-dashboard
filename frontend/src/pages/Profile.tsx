@@ -30,6 +30,14 @@ interface GamificationSummary {
   badges: Array<{ key: string; title: string; unlocked_at: string }>
 }
 interface ActivityDay { date: string; completions: number; xp_earned: number }
+interface GitHubActivity {
+  username: string
+  public_repos: number
+  repos_analyzed: number
+  total_commits: number
+  push_events: number
+  raw_languages: Record<string, number>
+}
 
 function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}` }
@@ -93,6 +101,18 @@ export function Profile() {
     queryFn: () =>
       fetch(`${API}/users/me/activity?days=91`, { headers: authHeaders(token!) }).then(r => r.json()),
     enabled: !!token,
+  })
+
+  const { data: githubActivity, isFetching: isGitHubActivityLoading, isError: isGitHubActivityError } = useQuery<GitHubActivity>({
+    queryKey: ['github-activity', user?.login],
+    queryFn: async () => {
+      const response = await fetch(`${API}/github/skills?username=${encodeURIComponent(user!.login)}`)
+      if (!response.ok) throw new Error('Не удалось загрузить GitHub activity')
+      return response.json()
+    },
+    enabled: !!user?.login,
+    staleTime: 10 * 60_000,
+    retry: false,
   })
 
   if (authLoading) {
@@ -172,7 +192,7 @@ export function Profile() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: 12 }}>
         {STAT_ITEMS.map(s => (
           <div key={s.label} className="glass" style={{ padding: '18px 20px', textAlign: 'center' }}>
             <p style={{ fontSize: 26, marginBottom: 6 }}>{s.icon}</p>
@@ -182,8 +202,57 @@ export function Profile() {
         ))}
       </div>
 
+      {/* GitHub activity */}
+      <div className="glass" style={{ padding: '20px 22px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
+          <div>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              GitHub activity
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+              Публичные события GitHub, обновляются при открытии профиля
+            </p>
+          </div>
+          <Link to="/github-import" style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+            Анализ репозиториев →
+          </Link>
+        </div>
+        {isGitHubActivityLoading ? (
+          <p style={{ color: 'var(--text-3)', fontSize: 13 }}>Загружаю публичную активность GitHub…</p>
+        ) : isGitHubActivityError ? (
+          <p style={{ color: 'var(--text-3)', fontSize: 13 }}>
+            GitHub временно не отдал activity. Откройте «Анализ репозиториев» и повторите попытку.
+          </p>
+        ) : githubActivity ? (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(125px, 1fr))', gap: 10 }}>
+              {[
+                ['Репозитории', githubActivity.public_repos, 'var(--accent)'],
+                ['Проанализировано', githubActivity.repos_analyzed, '#A78BFA'],
+                ['Коммиты', githubActivity.total_commits, '#FBBF24'],
+                ['Push events', githubActivity.push_events, '#34D399'],
+              ].map(([label, value, color]) => (
+                <div key={label as string} style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: 22, fontWeight: 900, color: color as string }}>{value}</p>
+                  <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4 }}>{label}</p>
+                </div>
+              ))}
+            </div>
+            {Object.keys(githubActivity.raw_languages).length > 0 && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+                {Object.entries(githubActivity.raw_languages).slice(0, 6).map(([language, share]) => (
+                  <span key={language} style={{ padding: '4px 9px', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--text-2)', fontSize: 11 }}>
+                    {language} <strong style={{ color: 'var(--accent)' }}>{share}%</strong>
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
+
       {/* XP, badges and activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 20, alignItems: 'stretch' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, alignItems: 'stretch' }}>
         <div className="glass" style={{ padding: '20px 22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline', marginBottom: 14 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
@@ -255,7 +324,7 @@ export function Profile() {
       </div>
 
       {/* Skills + Progress side by side */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, alignItems: 'start' }}>
 
         {/* Skills */}
         <div className="glass" style={{ padding: '20px 22px' }}>
