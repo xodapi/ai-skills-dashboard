@@ -229,7 +229,7 @@ export function Profile() {
               {[
                 ['Репозитории', githubActivity.public_repos, 'var(--accent)'],
                 ['Проанализировано', githubActivity.repos_analyzed, '#A78BFA'],
-                ['Коммиты', githubActivity.total_commits, '#FBBF24'],
+                ...(githubActivity.total_commits > 0 ? [['Коммиты', githubActivity.total_commits, '#FBBF24']] : []),
                 ['Push events', githubActivity.push_events, '#34D399'],
               ].map(([label, value, color]) => (
                 <div key={label as string} style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--surface-4)', border: '1px solid var(--border)' }}>
