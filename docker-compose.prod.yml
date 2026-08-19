@@ -45,6 +45,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       HH_API_KEY: ${HH_API_KEY}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
+      ADMIN_USERNAMES: ${ADMIN_USERNAMES:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://ai-skills.syntog.ru}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}

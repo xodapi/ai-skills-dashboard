@@ -71,6 +71,7 @@ class UserPrivate(UserPublic):
     is_public: bool
     show_email: bool
     is_verified: bool
+    role: str
     last_login: Optional[datetime] = None
 
     # Aliases for frontend compatibility
@@ -91,12 +92,6 @@ class UserPrivate(UserPublic):
     def company(self) -> Optional[str]:
         """Placeholder for company field."""
         return None
-
-    @computed_field
-    @property
-    def role(self) -> str:
-        """User role."""
-        return "developer"
 
     model_config = {"from_attributes": True}
 

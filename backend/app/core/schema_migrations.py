@@ -8,6 +8,8 @@ ALTER TABLE training_progress
     ADD COLUMN IF NOT EXISTS xp_awarded INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE training_progress
     ADD COLUMN IF NOT EXISTS rewarded_at TIMESTAMP;
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user';
 CREATE UNIQUE INDEX IF NOT EXISTS uq_progress_user_skill_module
     ON training_progress (user_id, skill, module_index);
 CREATE TABLE IF NOT EXISTS user_gamification (

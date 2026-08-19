@@ -48,7 +48,7 @@ const NAV_GROUPS = [
 const ALL_ITEMS = NAV_GROUPS.flatMap(g => g.items)
 
 // ── Mobile menu component ────────────────────────────────────────────────────
-function MobileMenu({ pathname, onClose }: { pathname: string; onClose: () => void }) {
+function MobileMenu({ pathname, onClose, isAdmin }: { pathname: string; onClose: () => void; isAdmin: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
 
   // Close on outside click
@@ -162,6 +162,24 @@ function MobileMenu({ pathname, onClose }: { pathname: string; onClose: () => vo
               </div>
             </div>
           ))}
+          {isAdmin && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '.08em', color: '#FBBF24', display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <span>🔐</span> Администрирование
+              </div>
+              <Link to="/admin" onClick={onClose} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8,
+                textDecoration: 'none', color: pathname.startsWith('/admin') ? '#FBBF24' : 'var(--text-2)',
+                background: pathname.startsWith('/admin') ? 'rgba(245,158,11,.1)' : 'transparent',
+                border: '1px solid rgba(245,158,11,.22)', fontSize: 14, minHeight: 44,
+              }}>
+                <span>▣</span><span>Панель администратора</span>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -323,6 +341,16 @@ export function Header() {
             {NAV_GROUPS.map(group => (
               <NavDropdown key={group.label} group={group} pathname={pathname} />
             ))}
+            {user?.role === 'admin' && (
+              <Link to="/admin" style={{
+                marginLeft: 4, padding: '6px 10px', borderRadius: 8, textDecoration: 'none',
+                color: pathname.startsWith('/admin') ? '#FBBF24' : 'var(--text-2)',
+                background: pathname.startsWith('/admin') ? 'rgba(245,158,11,.1)' : 'transparent',
+                border: '1px solid rgba(245,158,11,.2)', fontSize: 12, fontWeight: 700,
+              }}>
+                🔐 Admin
+              </Link>
+            )}
 
             {/* Current page breadcrumb pill */}
             {currentItem && (
@@ -468,7 +496,7 @@ export function Header() {
       </nav>
 
       {/* Mobile menu */}
-      {mobileMenuOpen && <MobileMenu pathname={pathname} onClose={() => setMobileMenuOpen(false)} />}
+      {mobileMenuOpen && <MobileMenu pathname={pathname} onClose={() => setMobileMenuOpen(false)} isAdmin={user?.role === 'admin'} />}
     </header>
   )
 }

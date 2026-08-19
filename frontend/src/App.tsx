@@ -24,6 +24,9 @@ import { Bookmarks } from '@/pages/Bookmarks'
 import { Privacy } from '@/pages/Privacy'
 import { Cookies } from '@/pages/Cookies'
 import { Terms } from '@/pages/Terms'
+import { AdminGuard } from '@/pages/admin/AdminGuard'
+import { AdminDashboard } from '@/pages/admin/Dashboard'
+import { AdminUsers } from '@/pages/admin/Users'
 
 function App() {
   return (
@@ -52,6 +55,8 @@ function App() {
         <Route path="privacy" element={<Privacy />} />
         <Route path="cookies" element={<Cookies />} />
         <Route path="terms" element={<Terms />} />
+        <Route path="admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+        <Route path="admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
       </Route>
       <Route path="auth/callback" element={<AuthCallback />} />
     </Routes>
