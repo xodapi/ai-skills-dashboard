@@ -63,4 +63,4 @@ mypy==1.12.1
 
 # Documentation
 mkdocs==1.6.1
-mkdocs-material==9.5.42
+mkdocs-material==9.7.7
