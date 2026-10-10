@@ -78,24 +78,12 @@ async def github_authorize(
     Returns:
         Dictionary with authorization URL
     """
-    try:
-        github_oauth = get_github_oauth()
-
-        state = _create_oauth_state()
-
-        auth_url = github_oauth.get_authorization_url(state=state)
-
-        return {
-            "authorization_url": auth_url,
-            "state": state,
-        }
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate authorization URL: {str(e)}",
-        )
+    # Иностранная аутентификация отключена: ст. 16 149-ФЗ (запрет использования
+    # иностранных сервисов аутентификации для граждан РФ).
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Вход через GitHub отключён (ст. 16 149-ФЗ)",
+    )
 
 
 @router.get("/github/callback", response_model=TokenResponse)
@@ -115,12 +103,11 @@ async def github_callback_get(
     Returns:
         JWT token and user information
     """
-    if not _verify_oauth_state(state):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired OAuth state",
-        )
-    return await _process_github_callback(code, db)
+    # Иностранная аутентификация отключена: ст. 16 149-ФЗ.
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Вход через GitHub отключён (ст. 16 149-ФЗ)",
+    )
 
 
 @router.post("/github/callback", response_model=TokenResponse)
@@ -138,12 +125,11 @@ async def github_callback_post(
     Returns:
         JWT token and user information
     """
-    if not _verify_oauth_state(callback_data.state):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired OAuth state",
-        )
-    return await _process_github_callback(callback_data.code, db)
+    # Иностранная аутентификация отключена: ст. 16 149-ФЗ.
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Вход через GitHub отключён (ст. 16 149-ФЗ)",
+    )
 
 
 async def _process_github_callback(
