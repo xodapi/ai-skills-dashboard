@@ -89,7 +89,7 @@ export function MySkills() {
         <p style={{ fontSize: 48, marginBottom: 12 }}>🔐</p>
         <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Нужна авторизация</p>
         <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 20 }}>
-          Войдите через GitHub для управления своими навыками
+          Вход временно недоступен
         </p>
         <Link to="/" style={{ padding: '12px 28px', borderRadius: 99, fontSize: 14, fontWeight: 700, background: 'var(--accent)', color: '#fff', textDecoration: 'none' }}>
           ← На главную

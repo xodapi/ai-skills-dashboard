@@ -118,7 +118,7 @@ export function VacanciesMap() {
   const handleBookmark = (e: React.MouseEvent, v: Vacancy) => {
     e.stopPropagation()
     if (!isAuthenticated) {
-      showToast('warning', 'Войдите через GitHub для сохранения вакансий')
+      showToast('warning', 'Вход временно недоступен')
       return
     }
     bookmarkMutation.mutate(v)

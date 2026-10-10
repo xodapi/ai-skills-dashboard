@@ -223,7 +223,7 @@ export function GapAnalyzer() {
         <p style={{ fontSize: 14, color: 'var(--text-3)', maxWidth: 720, lineHeight: 1.7 }}>
           Сравни свои навыки с требованиями вакансий и ролей — увидь, чего не хватает, и сразу запусти тренажёр.
           {!isAuthenticated && (
-            <> Войди через GitHub, чтобы навыки подгружались автоматически. </>
+            <> Вход временно недоступен. </>
           )}
         </p>
       </section>
@@ -275,7 +275,7 @@ export function GapAnalyzer() {
             <div className="glass" style={{ padding: '16px 18px', border: '1px solid rgba(34,211,238,.2)' }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>🔐 Авто-загрузка навыков</p>
               <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5, marginBottom: 10 }}>
-                Войди через GitHub — навыки из репозиториев и профиля подтянутся автоматически.
+                Вход временно недоступен.
               </p>
               <Link to="/github-import" style={{
                 display: 'inline-block', padding: '7px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700,
@@ -348,7 +348,7 @@ export function GapAnalyzer() {
             <div className="glass" style={{ padding: 60, textAlign: 'center' }}>
               <p style={{ fontSize: 48, marginBottom: 12 }}>👈</p>
               <p style={{ fontSize: 15, color: 'var(--text-2)', fontWeight: 600 }}>Добавь навыки слева</p>
-              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6 }}>или войди через GitHub для авто-загрузки</p>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6 }}></p>
             </div>
           ) : mode === 'role' ? (
             <RoleMode
